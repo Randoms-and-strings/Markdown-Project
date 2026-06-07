@@ -1,0 +1,31 @@
+<!-- set all meta and link head tags -->
+<!-- set proper body with semantic html, putting jinja templating into consideration -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="description" content="{% block metadescription %}{% endblock %}">
+    <meta property="og:title" content="{% block metaogtitle %}{% endblock %}">
+    <meta property="og:description" content="{% block metaogdescription %}{% endblock %}">
+    <meta property="og:image" content="{% block metaogimagelink %}{% endblock %}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% endblock %}</title>
+    <link href="{% block stylesheetlink %}{% endblock %}" rel="stylesheet">
+    <link href="{% block iconlink %}{% endblock %}" rel="icon">
+</head>
+<body>
+    <header>
+        {% block header %}{% endblock %}
+    </header>
+    <main>
+        {% block main %}{% endblock %}
+    </main>
+    <section>
+        {% block section %}{% endblock %}
+    </section>
+    <script src="{% block scriptsrc %}{% endblock %}" type="text/javascript">
+
+    </script>
+</body>
+</html>

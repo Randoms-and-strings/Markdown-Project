@@ -1,0 +1,23 @@
+<!-- create a form that extends base.html, meaning only form tag would be here, and its submit button -->
+ <!-- it should have two input tag, with svg side buttons that allow users to add extra fields of the type they want -->
+  <!-- first input is title, second is flexible and allows users to put text or image or link -->
+   <!-- submit button at the end -->
+
+{% extends 'header.html %}
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+
+{% block header %}
+<h1>Write Your Article</h1>
+<button>Submit</button>
+{% endblock %}
+
+{% block main %}
+<form>
+    <input type="text" placeholder="ENTER A TITLE" name="title">
+    <i class="fa-light fa-plus"></i>
+</form>
+{% endblock %}
+
+
