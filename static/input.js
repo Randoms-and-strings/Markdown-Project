@@ -236,11 +236,12 @@ function expandInputField(event){
 
 function increaseTextAreaHeight(event){
     console.log(event.target.scrollHeight, event.target.clientHeight);
-    while(event.target.scrollHeight > event.target.clientHeight){
+    if(event.target.scrollHeight > event.target.clientHeight){
         // console.log("yes");
         let rowSize = parseInt(event.target.getAttribute("rows")) + 1;
         // console.log(textArea.getAttribute("rows"), rowSize);
         event.target.setAttribute("rows", `${rowSize}`);
+        
     }
 }
 
