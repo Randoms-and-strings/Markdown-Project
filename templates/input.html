@@ -1,23 +1,47 @@
-<!-- create a form that extends base.html, meaning only form tag would be here, and its submit button -->
- <!-- it should have two input tag, with svg side buttons that allow users to add extra fields of the type they want -->
-  <!-- first input is title, second is flexible and allows users to put text or image or link -->
-   <!-- submit button at the end -->
+<!DOCTYPE html>
+<html lang="en">
 
-{% extends 'header.html %}
-<head>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-</head>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="{{ url_for('static', path='/input.css') }}" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Gelasio:ital,wght@0,400..700;1,400..700&family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Gelasio:ital,wght@0,400..700;1,400..700&family=Merriweather:ital,opsz,wght@0,18..144,300..900;1,18..144,300..900&family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap" rel="stylesheet">
+    </head>
 
-{% block header %}
-<h1>Write Your Article</h1>
-<button>Submit</button>
-{% endblock %}
+    <body>
+        <!-- <section> -->
+            <nav></nav>
+            <h1 class="gelasio-head">Write Your Article</h1>
+            <button class="submit-note">Submit</button>
 
-{% block main %}
-<form>
-    <input type="text" placeholder="ENTER A TITLE" name="title">
-    <i class="fa-light fa-plus"></i>
-</form>
-{% endblock %}
+            <form action="{{ url_for('markdown_page', user_email=email, post_id= 1) }}" method="post" enctype="multipart/form-data">
+                <div class="title">
+                    <input class="gelasio-body title-input" type="text" placeholder="ENTER A TITLE" name="title">
+                    <i class="fa-solid fa-xmark delete-label"></i>
+                    <!-- <i class="fa-regular fa-circle-xmark "></i> -->
+                </div>
 
 
+                <div class="pick-new-element">
+                    <i class="fa-solid fa-plus add-label"></i>
+                    <div id="options" class="hide-element">
+                        <div class="triangle-up"></div>
+                        <div class="element-type">
+                            <i class="fa-solid fa-image add-element" id="img"></i>
+                            <i class="fa-solid fa-heading add-element" id="h2"></i>
+                            <i class="fa-solid fa-paragraph add-element" id="p"></i>
+                            <i class="fa-solid fa-list add-element" id="ul"></i>
+                        </div>
+                    </div>
+                </div>
+
+            </form>
+        <!-- </section> -->
+        <script src="../static/input.js" type="text/javascript"></script>
+    </body>
+</html>
