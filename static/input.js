@@ -4,6 +4,7 @@ let inputFieldExpand = document.querySelector("input");
 let newElementOptions = document.querySelectorAll(".add-element");
 let newElementSelectContainer = document.querySelector(".pick-new-element");
 let placeholderPreviewImageVar;
+let articleOrder = 1;
 // console.log(newElementSelectContainer)
 
 // TOGGLE OPTION TO SHOW/HIDE CREATE NEW ELEMENT OPTIONS
@@ -17,7 +18,74 @@ document.querySelector(".add-label").addEventListener("click", (event) => {
 });
 
 // SUBMIT BUTTON NOT IN FORM TAG, SO EVENT LISTENER MAKES IT SUBMIT THE FORM
+// IF CERTAIN CONDITIONS ARE MET
+// 1) IF THE USER IS NOT JUST TRYING TO SUBMIT THE TITLE ALONE
+// 2) IF THERE'S A LIST CONTAINER; SAVES THE TOTAL VALUE IN AN HIDDEN INPUT FIELD.
+//      STRUCTURE IS LISTDIV > INPUT,UL>contentEditable LI
 document.querySelector(".submit-note").addEventListener("click", (event) => {
+    let ulExists = document.querySelectorAll(".ul-div");
+    let globalContainerCount =document.querySelectorAll("form > div");
+    let toAddNameInputs = document.querySelector("form").children;
+    
+    // console.log(toAddNameInputs);
+
+    if(globalContainerCount.length <= 2){
+        event.preventDefault();
+        alert("you need to write a proper article to submit!");
+        return
+    }
+
+    if(ulExists.length > 0){
+        
+        for(let i=0; i < ulExists.length; i++){
+            let respectiveListInputs = null;
+            let listDivChildren = ulExists[i].children;
+            let allUlChildren = null;
+
+            for(let j=0; j<listDivChildren.length;j++){
+                // console.log(listDivChildren[j].tagName);
+                if(listDivChildren[j].tagName === "INPUT"){
+                    respectiveListInputs = listDivChildren[j];
+                }else if(listDivChildren[j].tagName === "UL"){
+                    allUlChildren = listDivChildren[j].children;
+                }
+            }
+
+            for(let j = 0; j<allUlChildren.length;j++){
+                respectiveListInputs.value += allUlChildren[j].innerText + "\n";
+            }
+            // console.log(respectiveListInputs.value);
+            
+        }
+    }
+
+    console.log(toAddNameInputs);
+    for(let i = 1; i < toAddNameInputs.length - 1; i++){
+
+        let forInput = toAddNameInputs[i].querySelector("input");
+        if(forInput){
+            
+            if(forInput.value.trim().length < 1){
+                continue;
+            }
+            articleOrder += 1;
+            forInput.name = `${forInput.dataset.type}:${articleOrder}`;
+            // console.log(forInput);
+            continue;
+        }
+        
+
+        let forTextArea = toAddNameInputs[i].querySelector("textarea");
+        
+        if(forTextArea.value.trim().length < 1){
+                continue;
+        }
+        articleOrder += 1;
+        forTextArea.name = `${forTextArea.dataset.type}:${articleOrder}`;
+        // console.log(forTextArea);
+    }
+
+    console.log(articleOrder);
     submitFile.submit();
 });
 
@@ -58,6 +126,7 @@ for(let i = 0; i< newElementOptions.length; i++){
 
             newImgInput.type = "file";
             newImgInput.accept = "image/*";
+            newImgInput.setAttribute("data-type", "img");
 
             newImgPreview.style.display = "none";
             newImgPreview.alt = "image preview";
@@ -80,6 +149,7 @@ for(let i = 0; i< newElementOptions.length; i++){
 
                newHeadingUploadDiv.classList.add("h2-div");
                newH2.classList.add("new-h2-elements-input");
+               newH2.setAttribute("data-type", "h2");
                let deleteLabel = addClassesToElement(deleteBlock, pseudoDeleteLabel);
 
                newH2.addEventListener("focusout", removeBorder);
@@ -94,7 +164,7 @@ for(let i = 0; i< newElementOptions.length; i++){
             break;
         
         case "p":
-            console.log("picked p up");
+            
             newElementOptions[i].addEventListener("click", (event) => {
                let newParagraphUploadDiv = document.createElement("div");
                let newP =  document.createElement("input");
@@ -102,6 +172,7 @@ for(let i = 0; i< newElementOptions.length; i++){
 
                newParagraphUploadDiv.classList.add("p-div");
                newP.classList.add("new-p-elements-input");
+               newP.setAttribute("data-type", "p");
                let deleteLabel = addClassesToElement(deleteBlock, pseudoDeleteLabel);
 
                newP.addEventListener("input", expandInputField);
@@ -119,8 +190,8 @@ for(let i = 0; i< newElementOptions.length; i++){
             
             newElementOptions[i].addEventListener("click", (event) => {
                 let listDiv = document.createElement("div");
-                let textArea = document.createElement("textarea");
                 let ulistItem = document.createElement("ul");
+
                 let listItem = document.createElement("li");
                 let pseudoDeleteLabel = document.createElement("i");
                 let deleteLabel = addClassesToElement(deleteBlock, pseudoDeleteLabel);
@@ -131,7 +202,8 @@ for(let i = 0; i< newElementOptions.length; i++){
                 listItem.classList.add("remove-borders");
 
                 savingToInput.style.display = "none";
-                savingToInput.name = "list";
+                // savingToInput.name = "list";
+                savingToInput.setAttribute("data-type", "ul");
 
                 listItem.focus();
                 listDiv.classList.add("ul-div")
@@ -146,8 +218,9 @@ for(let i = 0; i< newElementOptions.length; i++){
                 listItem.addEventListener("keydown", (event) => {
                     // 
                     createListItems(event, ulistItem, savingToInput);
-                    console.log(savingToInput.value);
-                })
+                    // console.log(savingToInput.value);
+                });
+                // listItem.addEventListener("onfocusout")
                 
                 newElementSelectContainer.insertAdjacentElement("beforebegin", listDiv);
             });
@@ -170,10 +243,10 @@ function createListItems(event, ulContainer, hiddenInput){
         newListItem.innerText.trim();
         newListItem.addEventListener("keydown", (event) => {
             createListItems(event, ulContainer, hiddenInput);
-            console.log(hiddenInput.value);
+            // console.log(hiddenInput.value);
         });
         newListItem.focus()
-        hiddenInput.value += event.target.innerText + "\n";
+        // hiddenInput.value += event.target.innerText + "\n";
 
     }else if(event.key === "Backspace" || event.key === "Delete"){
         console.log(event.target.innerText.length);
@@ -241,7 +314,9 @@ function increaseTextAreaHeight(event){
         let rowSize = parseInt(event.target.getAttribute("rows")) + 1;
         // console.log(textArea.getAttribute("rows"), rowSize);
         event.target.setAttribute("rows", `${rowSize}`);
-        
+        // dont really know why this works, but it works....
+            event.target.dispatchEvent(new Event('input', { 'bubbles': true }))
+       
     }
 }
 
@@ -251,6 +326,10 @@ function backspaceDeleteRowsTextArea(event){
             let currentTextRows = event.target.rows;
             let newTextRows = parseInt(currentTextRows) - 1;
             event.target.setAttribute("rows", `${newTextRows}`);
+            // if(event.target.clientHeight > event.target.scrollHeight){
+            //     console.log("called:", event.target.clientHeight, event.target.scrollHeight);
+            //     backspaceDeleteRowsTextArea(event);
+            // }
         }else if(event.target.value.trim().length < 1){
             deleteElementContainer(event);
         }
@@ -269,7 +348,8 @@ function previewImageUpload(previewElement, inputElement, container){
 function deleteElementContainer(event){
     console.log(event);
         // console.log(deleteBlock[i].parentElement.children[0]);
-    if(event.target.parentElement.querySelector("input[name=title]")){
+    if(event.target.parentElement.querySelector('.title-input')){
+        alert("can't have an article without a title man🙄🙄")
         return;
     }
     event.target.parentElement.remove();
