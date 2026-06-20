@@ -19,9 +19,9 @@
             <h1 class="gelasio-head">Write Your Article</h1>
             <button class="submit-note">Submit</button>
 
-            <form action="{{ url_for('markdown_page', user_email=email, post_id= 1) }}" method="post" enctype="multipart/form-data">
+            <form action="{{ url_for('processing_page', email=email) }}" method="post" enctype="multipart/form-data">
                 <div class="title">
-                    <input class="gelasio-body title-input" type="text" placeholder="ENTER A TITLE" name="title">
+                    <input class="gelasio-body title-input" type="text" placeholder="ENTER A TITLE" name="h1:1">
                     <i class="fa-solid fa-xmark delete-label"></i>
                     <!-- <i class="fa-regular fa-circle-xmark "></i> -->
                 </div>
