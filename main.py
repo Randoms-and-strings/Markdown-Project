@@ -1,5 +1,6 @@
 import os
-
+import requests
+import aiohttp
 from fastapi import FastAPI, HTTPException, Request, Form, File, UploadFile, Body
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -7,6 +8,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from contextlib import asynccontextmanager
 from typing import Annotated, Optional
 from pydantic import BaseModel, Field, EmailStr, ConfigDict, BeforeValidator
+from pymongo import ReturnDocument
 import asyncio
 from models import *
 from starlette.datastructures import FormData, UploadFile
@@ -15,6 +17,47 @@ import boto3
 from dotenv import load_dotenv
 from os import getenv
 load_dotenv()
+
+PyObjectId = Annotated[str, BeforeValidator(str)]
+class PostData(BaseModel):
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
+    type: str = Field(...)
+    position: int = Field(...)
+    content: str = Field(...)
+    model_config = ConfigDict(
+        populate_by_name=True,
+        arbitrary_types_allowed=True,
+        json_schema_extra={
+            "example": {
+                "type": "h1",
+                "position": 1,
+                "content": "TITLE OF A BLOGPOST OR CONTENT",
+            }
+        },
+    )
+
+class UpdatePostData(BaseModel):
+    type: Optional[str] = None
+    position: Optional[int] = None
+    content: Optional[str] = None
+    model_config = ConfigDict(
+        json_encoders={ObjectId: str},
+        arbitrary_types_allowed=True,
+        json_schema_extra={
+            "example": {
+                "type": "h1",
+                "position": 1,
+                "content": "TITLE OF A BLOGPOST OR CONTENT",
+            }
+        },
+    )
+
+class MarkdownPost(BaseModel):
+    email: EmailStr = Field(nullable=False, unique=True, primary_key=True)
+    post: Optional[list[PostData]]
+
+class UpdateMarkdownPost(BaseModel):
+    post: Optional[list[PostData]]
 
 def parse_img_from_form(picture_object_key:str, form_object_iterable: FormData) -> tuple[str, int, UploadFile] | tuple[HTTPException, None, None]:
     element_type = picture_object_key.split(":")[0]
@@ -64,8 +107,10 @@ def save_to_s3(cleaned_picture_object: UploadFile, element_name:str, element_pos
 @asynccontextmanager
 async def lifespans(app:FastAPI):
     # yield main()
+    get_tables()
 
-    yield await main2()
+
+    yield
 
 app = FastAPI(lifespan=lifespans)
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -80,14 +125,28 @@ templates = Jinja2Templates(directory="templates")
 # route to display form, email as id
 #use email as userid when displaying form
 @app.get("/markdown-form/{user_email}", response_class=HTMLResponse)
-def markdown_form(request:Request, user_email:str):
+async def markdown_form(request:Request, user_email:str):
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get("http://127.0.0.1:8000/user/create_new", params={"q": user_email}) as response:
+                # print("here1")
+                resp = await response.json()
+                print("done new account", resp)
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500,
+                            detail="something went wrong from our end, please try again at a later time")
+    # else:
+        if not resp["detail"]:
+            raise resp
+
     return templates.TemplateResponse(request=request, name="input.html", context={"email": user_email})
 
 #---------------------------------------------------------------------------------------------------------------------
 # route to send form data to api, step 2 is build api to receive, step3 is to redirect to page
 @app.post("/processing-page/{email}")
 async def processing_page(request:Request, email:str):
-    print(email)
+    # print(email)
     full_post = []
     form_data = await request.form()
     # print(form_data)
@@ -113,8 +172,9 @@ async def processing_page(request:Request, email:str):
 
             else:
                 element_type = key.split(":")[0]
-                element_position = (key.split(":")[1]),
+                element_position = int(key.split(":")[1])
                 element_content = form_data.get(key)
+                # print(element_type, element_position)
 
                 full_post.append({
                     "type": element_type,
@@ -123,19 +183,85 @@ async def processing_page(request:Request, email:str):
                 })
 
         # print(full_post)
-        return {
-            "h1": full_post
-        }
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(f"http://127.0.0.1:8000/user/add_post/{email}", json=full_post) as response:
+                    # print("here1")
+                    resp = await response.json()
+                    print("done")
+        except Exception as e:
+            print(e)
+            raise HTTPException(status_code=500, detail="something went wrong from our end, please try again at a later time")
+        else:
+            if resp.detail != "success":
+                raise HTTPException(status_code=400, detail="something went wrong with your upload")
+            return {
+                "h1": full_post
+            }
     # don't know how this can happen, but incase it can....
     raise HTTPException(status_code=500, detail="something went wrong")
 
 # ____________________________________________________________________________________________________________________
 
 #api to save to db
-@app.post("/students/",response_description="Add new student",response_model=MarkdownPost,status_code=201,
-          response_model_by_alias=False)
-async def create_markdown_user():
-    # new_post = PostData.model_dump()
-    pass
+# @app.post("/user-post/add", response_description="Add new post and user", status_code=201,
+#           response_model_by_alias=False, response_model=PostData)                #
+# async def create_markdown_user(array_of_postdata: list[PostData]):                       #
+#     markdown_post = []
+#     for post_data in array_of_postdata:
+#         markdown_post.append(post_data.model_dump(by_alias=True, exclude=["id"]))
+#     # markdown_collection
+#     print("done")
+#
+#     return {
+#         "detail": "success"
+#     }
+@app.post("/user/add_post/{email}", status_code=201,response_model_by_alias=False)                #
+async def create_markdown_post(request: Request, email:str):                       #
+    data = await request.json()
+    print(data)
+    if (existing_user := await markdown_collection.find_one({"email": email})) is not None:
+        # return HTTPException(status_code=409, detail=f"email already exists")
+        print(existing_user, len(existing_user["post"]))
+        if len(existing_user["post"]) >0:
+            return HTTPException(status_code=409, detail=f"email already exists")
+        #{'status_code': 409, 'detail': 'email already exists, please use another.', 'headers': None}
 
+    try:
+        update_result = await markdown_collection.find_one_and_update(
+            {"email": email},
+            {"post": data},
+            return_document=ReturnDocument.AFTER,
+        )
+    except Exception as e:
+        print(e)
+        return HTTPException(status_code=409, detail="failed to insert package")
+    else:
+        if update_result is None:
+            raise HTTPException(status_code=404, detail=f"User with email: {email} not found")
+
+        return {
+            "detail": "success",
+            "insert": update_result
+        }
+
+
+
+@app.get("/user/create_new", status_code=201,response_model_by_alias=False)                #
+async def create_markdown_user(q: str):
+    print(q)#
+    if q:
+        user = await markdown_collection.find_one({"email": q})
+        if user is not None:
+            return HTTPException(status_code=409, detail="email already exists, please use another.")
+
+        new_user = await markdown_collection.insert_one({"email": q, "post": None})
+        print(new_user)
+        return {
+            "detail": "user created successfully"
+        }
+
+
+    return HTTPException(status_code=400, detail="missing email field. Please provide an email")
+# why not create email for user on loadpage, then on submit, add the post
 # api to get from db
