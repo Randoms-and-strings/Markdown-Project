@@ -1,5 +1,6 @@
 # api to save info in db
 # api to get info from db
+# uvicorn api:app --host 0.0.0.0 --port 8001
 from bson import ObjectId
 from fastapi import FastAPI, HTTPException, Request
 from pymongo import ReturnDocument

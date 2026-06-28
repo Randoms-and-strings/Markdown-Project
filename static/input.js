@@ -4,7 +4,6 @@ let inputFieldExpand = document.querySelector("input");
 let newElementOptions = document.querySelectorAll(".add-element");
 let newElementSelectContainer = document.querySelector(".pick-new-element");
 let placeholderPreviewImageVar;
-let articleOrder = 1;
 // console.log(newElementSelectContainer)
 
 // TOGGLE OPTION TO SHOW/HIDE CREATE NEW ELEMENT OPTIONS
@@ -26,6 +25,7 @@ document.querySelector(".submit-note").addEventListener("click", (event) => {
     let ulExists = document.querySelectorAll(".ul-div");
     let globalContainerCount =document.querySelectorAll("form > div");
     let toAddNameInputs = document.querySelector("form").children;
+    let articleOrder = 1;
     
     // console.log(toAddNameInputs);
 
