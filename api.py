@@ -2,55 +2,53 @@
 # api to get info from db
 # uvicorn api:app --host 0.0.0.0 --port 8001
 from bson import ObjectId
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Depends, Path
+from fastapi.params import Depends
 from pymongo import ReturnDocument
-from models import markdown_collection, get_tables
+from models import get_tables, client, MarkdownPost
 from contextlib import asynccontextmanager
-from typing import Annotated, Optional
-from pydantic import BaseModel, Field, EmailStr, ConfigDict, BeforeValidator
-from sqlmodel import Field
+from rate_limiter import RateLimiter
+import os
+from dotenv import load_dotenv
 
-PyObjectId = Annotated[str, BeforeValidator(str)]
+load_dotenv()
 
-class MarkdownPost(BaseModel):
-    id: Optional[PyObjectId] = Field(alias="_id", default_factory=PyObjectId)
-    email: EmailStr = Field(nullable=False, unique=True, index=True)
-    post: Optional[list]
-    model_config = ConfigDict(
-        populate_by_name=True,
-        arbitrary_types_allowed=True,
-        json_encoders={ObjectId: str},
-    )
+markdown_collection = None
+rate_limiter = RateLimiter(username=os.getenv("REDIS_USERNAME"),password=os.getenv("REDIS_PASSWORD"),
+                host=os.getenv("REDIS_HOST"),port=os.getenv("REDIS_PORT"))
+
 
 @asynccontextmanager
 async def lifespans(app:FastAPI):
-    # yield main()
-    get_tables()
+    global markdown_collection
+
+    markdown_collection = get_tables()
     yield
+
+    await rate_limiter.close_redis()
+    await client.close()
+
 
 app = FastAPI(lifespan=lifespans)
 
 
 
-@app.post("/user/add_post/{email}", status_code=201,response_model_by_alias=False)                #
-async def create_markdown_post(request: Request, email:str):                       #
+
+@app.post("/user/add_post/{email}", status_code=201,response_model_by_alias=False)
+async def create_markdown_post(request: Request, email:dict = Depends(rate_limiter.main)):
+    print(type(email))
+    if isinstance(email, HTTPException):
+        print("returning error")
+        return email
     try:
         data = await request.json() #validate for if an idiot sends request not in json
     except Exception as error:
         print(error)
         return HTTPException(status_code=409, detail=f"expected json, received other data type")
-    # print(data)
-    # if (existing_user := await markdown_collection.find_one({"email": email})) is not None:
-    #     # return HTTPException(status_code=409, detail=f"email already exists")
-    #     print(existing_user, len(existing_user["post"]))
-        # if len(existing_user["post"]) >0:
-        #     return HTTPException(status_code=409, detail=f"email already exists")
-        #{'status_code': 409, 'detail': 'email already exists, please use another.', 'headers': None}
 
     try:
         update_result = await markdown_collection.find_one_and_update(
             {"email": email},
-            # {"$push": {"post": {"$each": data} }},
             {"$set": {"post":  data }},
             return_document=ReturnDocument.AFTER,
         )
@@ -98,11 +96,6 @@ async def create_markdown_user(q: str):
     if q:
 
         user = await markdown_collection.update_one({"email":q}, { "$setOnInsert": { "post": None} }, upsert=True)
-        # user = await markdown_collection.find_one({"email": q})
-        # if user is not None:
-        #     return
-        #
-        # new_user = await markdown_collection.insert_one({"email": q, "post": []})
         print(user)
         return {
             "detail": "user created successfully"

@@ -97,7 +97,8 @@ async def processing_page(request:Request, email:str):
             # return "<h1>something went wrong from our end, please try at a later time</h1>"
         else:
             if resp.get("detail") != "success":
-                raise HTTPException(status_code=400, detail="something went wrong with your upload")
+
+                return resp
                 # return "<h1>something went wrong with your upload</h1>"
             return {
                 "h1": full_post
@@ -118,10 +119,9 @@ async def get_markdown(user_email:str):
         return "<h1>something went wrong, we couldn't get your post</h1>"
     else:
         if not resp.get("status"):
-            # raise HTTPException(status_code=400, detail="something went wrong with your upload")
-            return f"<h1>{resp.get("detail")}</h1>"
+            raise HTTPException(status_code=400, detail="something went wrong with your upload")
+            # return f"<h1>{resp.get("detail")}</h1>"
         return {
             "the_post": resp.get("user_data")
         }
 
-# figure out numbering solution for element.
