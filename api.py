@@ -1,9 +1,8 @@
 # api to save info in db
 # api to get info from db
-# uvicorn api:app --host 0.0.0.0 --port 8001
+# uvicorn api:app --host 0.0.0.0 --port 8001 --reload
 from bson import ObjectId
 from fastapi import FastAPI, HTTPException, Request, Depends, Path
-from fastapi.params import Depends
 from pymongo import ReturnDocument
 from models import get_tables, client, MarkdownPost
 from contextlib import asynccontextmanager
@@ -14,18 +13,18 @@ from dotenv import load_dotenv
 load_dotenv()
 
 markdown_collection = None
-rate_limiter = RateLimiter(username=os.getenv("REDIS_USERNAME"),password=os.getenv("REDIS_PASSWORD"),
-                host=os.getenv("REDIS_HOST"),port=os.getenv("REDIS_PORT"))
+# rate_limiter = RateLimiter(username=os.getenv("REDIS_USERNAME"),password=os.getenv("REDIS_PASSWORD"),
+#                 host=os.getenv("REDIS_HOST"),port=os.getenv("REDIS_PORT"))
 
 
 @asynccontextmanager
 async def lifespans(app:FastAPI):
     global markdown_collection
 
-    markdown_collection = get_tables()
+    markdown_collection = await get_tables()
     yield
 
-    await rate_limiter.close_redis()
+    # await rate_limiter.close_redis()
     await client.close()
 
 
@@ -35,11 +34,11 @@ app = FastAPI(lifespan=lifespans)
 
 
 @app.post("/user/add_post/{email}", status_code=201,response_model_by_alias=False)
-async def create_markdown_post(request: Request, email:dict = Depends(rate_limiter.main)):
-    print(type(email))
-    if isinstance(email, HTTPException):
-        print("returning error")
-        return email
+async def create_markdown_post(request: Request, email:str):
+    # print(type(email))
+    # if isinstance(email, HTTPException):
+    #     print("returning error")
+    #     return email
     try:
         data = await request.json() #validate for if an idiot sends request not in json
     except Exception as error:

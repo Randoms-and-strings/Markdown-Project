@@ -1,4 +1,5 @@
 import aiohttp
+import os
 from fastapi import FastAPI, HTTPException, Request, UploadFile
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -6,13 +7,29 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from starlette.datastructures import FormData, UploadFile
 from image_parser import parse_img_from_form, save_to_s3
 from dotenv import load_dotenv
+from fastapi.params import Depends
+from rate_limiter import RateLimiter
+from contextlib import asynccontextmanager
+from markupsafe import Markup
 load_dotenv()
 
 
 API_PORT = 8001
 API_HOST = "http://127.0.0.1"
 
-app = FastAPI()
+rate_limiter = RateLimiter(username=os.getenv("REDIS_USERNAME"),password=os.getenv("REDIS_PASSWORD"),
+                host=os.getenv("REDIS_HOST"),port=os.getenv("REDIS_PORT"))
+
+
+@asynccontextmanager
+async def lifespans(app:FastAPI):
+
+    yield
+
+    await rate_limiter.close_redis()
+
+
+app = FastAPI(lifespan=lifespans)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 # ---------------------------------------------model and app config above-----------------------------------------------------------------------
@@ -40,9 +57,16 @@ async def markdown_form(request:Request, user_email:str):
 
 
 # route to send form data to api, step 2 is build api to receive, step3 is to redirect to page
+# but there is also a rate limiter on the route.
 @app.post("/processing-page/{email}")
-async def processing_page(request:Request, email:str):
+async def processing_page(request:Request, email:dict = Depends(rate_limiter.main)):
     # print(email)
+    # print(type(email))
+    if isinstance(email, HTTPException):
+        print("returning error")
+        raise email
+
+
     full_post = []
     form_data:FormData = await request.form()
     last_element_position_in_form:int = int(list(form_data.items())[-1][0].split(":")[1])
@@ -108,7 +132,8 @@ async def processing_page(request:Request, email:str):
     # return "<h1>something went wrong</h1>"
 
 @app.get("/post/{user_email}")
-async def get_markdown(user_email:str):
+async def get_markdown(request:Request, user_email:str):
+    user_post = None
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(f"{API_HOST}:{API_PORT}/get-user-post/{user_email}") as response:
@@ -121,7 +146,24 @@ async def get_markdown(user_email:str):
         if not resp.get("status"):
             raise HTTPException(status_code=400, detail="something went wrong with your upload")
             # return f"<h1>{resp.get("detail")}</h1>"
-        return {
-            "the_post": resp.get("user_data")
-        }
+        # return {
+        #     "the_post": resp.get("user_data")
+        # }
+        user_post = resp.get("user_data").get("post")
+        print(user_post)
+    elements_present:list[Markup] = []
 
+    for items in user_post:
+        if items.get("type") == "h1":
+            elements_present.append(Markup(f"<h1>{items.get('content')}</h1>"))
+        elif items.get("type") == "h2":
+            elements_present.append(Markup(f"<h2>{items.get('content')}</h2>"))
+        elif items.get("type") == "p":
+            elements_present.append(Markup(f"<p>{items.get('content')}</p>"))
+        elif items.get("type") == "ul":
+            elements_present.append(Markup(f"<ul>"
+                                           f"{items.get('content')}"
+                                           f"</ul>"))
+    return templates.TemplateResponse(request=request, name="markdown.html",
+                                      context={"allowed_elements":elements_present,
+                                               "user_data": user_post})

@@ -34,7 +34,7 @@ class RateLimiter:
         }
 
         try:
-            add_new = await self.r.hsetex(name=user_email, mapping=new_user, ex=30)
+            add_new = await self.r.hsetex(name=user_email, mapping=new_user, ex=60)
             print("added")
         except Exception as err:
             # raise err
