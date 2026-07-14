@@ -46,15 +46,17 @@ document.querySelector(".submit-note").addEventListener("click", (event) => {
                 // console.log(listDivChildren[j].tagName);
                 if(listDivChildren[j].tagName === "INPUT"){
                     respectiveListInputs = listDivChildren[j];
+                    respectiveListInputs.value = "";   //this clears the value incase of network issue and reloads
                 }else if(listDivChildren[j].tagName === "UL"){
                     allUlChildren = listDivChildren[j].children;
                 }
             }
 
             for(let j = 0; j<allUlChildren.length;j++){
-                respectiveListInputs.value += allUlChildren[j].innerText + "\n";
+                respectiveListInputs.value += allUlChildren[j].innerText + "/<newlinechar>";
+//                    respectiveListInputs.value = "hello";
             }
-            // console.log(respectiveListInputs.value);
+//             console.log(respectiveListInputs.value);
             
         }
     }

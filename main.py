@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, RedirectResponse
 from starlette.datastructures import FormData, UploadFile
-from image_parser import parse_img_from_form, save_to_s3
+from image_parser import parse_img_from_form, save_to_s3, get_img_s3
 from dotenv import load_dotenv
 from fastapi.params import Depends
 from rate_limiter import RateLimiter
@@ -23,7 +23,7 @@ rate_limiter = RateLimiter(username=os.getenv("REDIS_USERNAME"),password=os.gete
 
 @asynccontextmanager
 async def lifespans(app:FastAPI):
-
+    print("redis connected successfully")
     yield
 
     await rate_limiter.close_redis()
@@ -58,7 +58,7 @@ async def markdown_form(request:Request, user_email:str):
 
 # route to send form data to api, step 2 is build api to receive, step3 is to redirect to page
 # but there is also a rate limiter on the route.
-@app.post("/processing-page/{email}")
+@app.post("/processing-page/{email}", response_class=RedirectResponse)
 async def processing_page(request:Request, email:dict = Depends(rate_limiter.main)):
     # print(email)
     # print(type(email))
@@ -87,7 +87,7 @@ async def processing_page(request:Request, email:dict = Depends(rate_limiter.mai
                     raise element_type
                     # return f"<h1>{element_type.get("detail")}</h1>"
 
-                resp:dict|HTTPException = save_to_s3(picture_object, element_type, position)
+                resp:dict|HTTPException = await save_to_s3(picture_object, element_type, position)
 
                 if isinstance(resp, HTTPException):
                     raise resp
@@ -124,9 +124,10 @@ async def processing_page(request:Request, email:dict = Depends(rate_limiter.mai
 
                 return resp
                 # return "<h1>something went wrong with your upload</h1>"
-            return {
-                "h1": full_post
-            }
+            # return {
+            #     "h1": full_post
+            # }
+            return RedirectResponse(request.url_for("get_markdown", user_email=email))
     # don't know how this can happen, but incase it can....
     raise HTTPException(status_code=500, detail="something went wrong")
     # return "<h1>something went wrong</h1>"
@@ -161,9 +162,26 @@ async def get_markdown(request:Request, user_email:str):
         elif items.get("type") == "p":
             elements_present.append(Markup(f"<p>{items.get('content')}</p>"))
         elif items.get("type") == "ul":
+            all_li_items:list[str] = items.get("content").split("/<newlinechar>")
+            # print(all_li_items)
+            arrangement:str = ""
+            for li in all_li_items[:-1]:  #the split added "" at the end of the list, so had to exclude that
+                arrangement += f"<li>{li}</li>\n"
+            # print(arrangement)
             elements_present.append(Markup(f"<ul>"
-                                           f"{items.get('content')}"
+                                           f"{arrangement}"
                                            f"</ul>"))
+        elif items.get("type") == "img":
+            img_name:str = items.get("content")
+            img_link:str = get_img_s3(img_name)
+            elements_present.append(Markup(f"<img src={img_link} alt=''/>"))
+            # get from s3
+
     return templates.TemplateResponse(request=request, name="markdown.html",
                                       context={"allowed_elements":elements_present,
                                                "user_data": user_post})
+
+# set max char limit for blog input
+# style the page that displays markdown
+# find way to call delete
+# redirect from processing page

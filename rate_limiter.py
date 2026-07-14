@@ -52,7 +52,7 @@ class RateLimiter:
                 current_user = await self.add_to_counter(email)
                 current_user_counter = int(current_user.get("counter"))
 
-                if not current_user_counter or current_user_counter > 1:
+                if not current_user_counter or current_user_counter > 5:
                     # return print("access denied")
                     return HTTPException(status_code=429, detail="error, too many requests")
 
