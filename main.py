@@ -1,3 +1,5 @@
+import time
+
 import aiohttp
 import os
 from fastapi import FastAPI, HTTPException, Request, UploadFile
@@ -5,7 +7,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, RedirectResponse
 from starlette.datastructures import FormData, UploadFile
-from image_parser import parse_img_from_form, save_to_s3, get_img_s3
+import starlette.status as status
+from image_parser import parse_img_from_form, save_to_s3, get_img_s3, remove_image_from_post
 from dotenv import load_dotenv
 from fastapi.params import Depends
 from rate_limiter import RateLimiter
@@ -14,9 +17,9 @@ from markupsafe import Markup
 load_dotenv()
 
 
-API_PORT = 8001
-API_HOST = "http://127.0.0.1"
-
+API_PORT:int = 8001
+API_HOST:str = "http://127.0.0.1"
+MAX_POST_LENGTH:int = 10000
 rate_limiter = RateLimiter(username=os.getenv("REDIS_USERNAME"),password=os.getenv("REDIS_PASSWORD"),
                 host=os.getenv("REDIS_HOST"),port=os.getenv("REDIS_PORT"))
 
@@ -62,12 +65,14 @@ async def markdown_form(request:Request, user_email:str):
 async def processing_page(request:Request, email:dict = Depends(rate_limiter.main)):
     # print(email)
     # print(type(email))
+    start_time = time.time()
     if isinstance(email, HTTPException):
-        print("returning error")
+        # print("returning error")
         raise email
 
 
-    full_post = []
+    full_post:list[dict[str, int]] = []
+    char_length:int = 0
     form_data:FormData = await request.form()
     last_element_position_in_form:int = int(list(form_data.items())[-1][0].split(":")[1])
     print(form_data)
@@ -80,6 +85,25 @@ async def processing_page(request:Request, email:dict = Depends(rate_limiter.mai
     if isinstance(form_data, FormData):
         for key in form_data:
             # print(form_data.get(items))
+            if not isinstance(form_data.get(key), UploadFile):
+
+                element_type: str = key.split(":")[0]
+                element_position: int = int(key.split(":")[1])
+                element_content: str = form_data.get(key)
+                char_length += len(element_content)
+                # print(element_type, element_position)
+
+                if char_length > MAX_POST_LENGTH:
+                    raise HTTPException(status_code=413, detail="exceeded allowed character limit for an article")
+
+                full_post.append({
+                    "type": element_type,
+                    "position": element_position,
+                    "content": element_content
+                })
+        images_to_parse = []            #todo: for gathering images to s3 in one swoop
+        for key in form_data:
+            # print(form_data.get(items))
             if isinstance(form_data.get(key), UploadFile):
                 element_type, position, picture_object = parse_img_from_form(key, form_data)
 
@@ -87,34 +111,26 @@ async def processing_page(request:Request, email:dict = Depends(rate_limiter.mai
                     raise element_type
                     # return f"<h1>{element_type.get("detail")}</h1>"
 
-                resp:dict|HTTPException = await save_to_s3(picture_object, element_type, position)
+                s3_resp:dict|HTTPException = await save_to_s3(picture_object, element_type, position)
+                # (save_to_s3,
 
-                if isinstance(resp, HTTPException):
-                    raise resp
-
-
-                full_post.append(resp)
+                if isinstance(s3_resp, HTTPException):
+                    raise s3_resp
 
 
-            else:
-                element_type = key.split(":")[0]
-                element_position = int(key.split(":")[1])
-                element_content = form_data.get(key)
-                # print(element_type, element_position)
-
-                full_post.append({
-                    "type": element_type,
-                    "position": element_position,
-                    "content": element_content
-                })
-
+                full_post.append(s3_resp)
         # print(full_post)
         try:
+            api_start_time = time.time()
+            full_post.sort(key=lambda item: item.get("position"))
             async with aiohttp.ClientSession() as session:
-                async with session.post(f"{API_HOST}:{API_PORT}/user/add_post/{email}", json=full_post) as response:
+                async with session.post(f"{API_HOST}:{API_PORT}/user/add_post/{email}",
+                                        json=full_post) as response:
                     # print("here1")
                     resp = await response.json()
+
                     # print("the resp:", resp)
+            print(f"the addposttodb api function took {time.time() - api_start_time} secs to complete")
         except Exception as e:
             print(e)
             raise HTTPException(status_code=500, detail="something went wrong from our end, please try again at a later time")
@@ -123,11 +139,15 @@ async def processing_page(request:Request, email:dict = Depends(rate_limiter.mai
             if resp.get("detail") != "success":
 
                 return resp
-                # return "<h1>something went wrong with your upload</h1>"
+            post_body:list = resp.get("former_post").get("post")
+            remove_old_pics_from_s3:bool = await remove_image_from_post(post_body)
+            if not remove_old_pics_from_s3:
+                print("failed to delete former img from s3. solve this and find out why")
             # return {
             #     "h1": full_post
             # }
-            return RedirectResponse(request.url_for("get_markdown", user_email=email))
+            print(f"the function took {time.time() - start_time } secs to complete")
+            return RedirectResponse(url=f"/post/{email}", status_code=status.HTTP_302_FOUND)
     # don't know how this can happen, but incase it can....
     raise HTTPException(status_code=500, detail="something went wrong")
     # return "<h1>something went wrong</h1>"
@@ -181,7 +201,4 @@ async def get_markdown(request:Request, user_email:str):
                                       context={"allowed_elements":elements_present,
                                                "user_data": user_post})
 
-# set max char limit for blog input
 # style the page that displays markdown
-# find way to call delete
-# redirect from processing page

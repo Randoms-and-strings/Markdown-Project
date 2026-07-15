@@ -44,12 +44,17 @@ async def create_markdown_post(request: Request, email:str):
     except Exception as error:
         print(error)
         return HTTPException(status_code=409, detail=f"expected json, received other data type")
+    # else:
+    #     data.sort(key= lambda item: item.get("position"))
+        # print(data)
+
 
     try:
+        # returns the old document that has been changed
         update_result = await markdown_collection.find_one_and_update(
             {"email": email},
             {"$set": {"post":  data }},
-            return_document=ReturnDocument.AFTER,
+            return_document=ReturnDocument.BEFORE,
         )
 
 
@@ -64,7 +69,7 @@ async def create_markdown_post(request: Request, email:str):
         # print("returning to processing api the data:", update_result)
         return {
             "detail": "success",
-            "insert": update_result
+            "former_post": update_result
         }
 
 

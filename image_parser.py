@@ -10,6 +10,7 @@ load_dotenv()
 
 # obj = boto3.client("s3")
 s3_session = aioboto3.Session()
+
 S3_BUCKET_URL = (f"https://{os.getenv("S3_MARKDOWNAPP_BUCKETNAME")}.s3."
                  f"{os.getenv("S3_MARKDOWNAPP_REGION")}.amazonaws.com/"
                  f"{os.getenv("S3_MARKDOWNAPP_FOLDER")}")
@@ -95,6 +96,62 @@ async def save_to_s3(cleaned_picture_object: UploadFile, element_name:str, eleme
 def get_img_s3(img_name:str) -> str:
     return f"{S3_BUCKET_URL}/{img_name}"
 
+async def remove_image_from_post(post_content:list):
+    all_img_names:list[str] = []
+    for items in post_content:
+        print(items)
+        post_content_type:str = items.get("type")
+        if post_content_type.lower() == "img":
+            all_img_names.append(items.get("content"))
+
+    # todo:there shuld be a more eff way to batch delete, thats why i left this, else i'd have used 1func to handle all
+    #
+    no_of_images_in_post:int = len(all_img_names)
+    if no_of_images_in_post > 1:
+        result = await batch_delete_from_s3(all_img_names)
+        if not result:
+            # todo:should return failed names list, not true
+            return False
+        return True
+
+
+    single_delete:bool = await delete_from_s3(all_img_names[0])
+    if not single_delete:
+        return HTTPException(status_code=500, detail="failed to delete an unused img from s3")
+    return True
+
+    pass
+
+async def batch_delete_from_s3(items_to_delete:list[str]):
+    async with s3_session.resource("s3") as s3:
+        try:
+            bucket = await s3.Bucket(os.getenv("S3_MARKDOWNAPP_BUCKETNAME"))
+
+            for name in items_to_delete:
+                result = await bucket.objects.filter(Prefix=f'{os.getenv("S3_MARKDOWNAPP_FOLDER")}/{name}').delete()
+            #     await s3_object.delete()
+            #     [{'ResponseMetadata': {'RequestId': 'NT5TG5PP31CHRY31',
+            #                            'HostId': '6/qf/dR07E7TGkZiUgKuRHI2/nQmCBvd91YncGGVU1kwNwIHxTu3anYnUK0QvoGUH7wecucyxao=',
+            #                            'HTTPStatusCode': 200, 'HTTPHeaders': {
+            #             'x-amz-id-2': '6/qf/dR07E7TGkZiUgKuRHI2/nQmCBvd91YncGGVU1kwNwIHxTu3anYnUK0QvoGUH7wecucyxao=',
+            #             'x-amz-request-id': 'NT5TG5PP31CHRY31', 'date': 'Wed, 15 Jul 2026 15:41:50 GMT',
+            #             'connection': 'close', 'content-type': 'application/xml', 'transfer-encoding': 'chunked',
+            #             'server': 'AmazonS3'}, 'RetryAttempts': 0},
+            #       'Deleted': [{'Key': 'markdown_app/a932ea42-99d5-4f9a-9349-3bf4abd80632.jpg'}]}]
+
+                print("done", result) #result is an empty list if the file doesnt exist, or above if success
+
+        except Exception as s3_delete_error:
+            print(s3_delete_error)
+            # todo:should return name that failed to delete from s3, for later processing
+            return False
+            # return HTTPException(status_code=500, detail="failed to delete your file")
+        else:
+            # if result[0]["ResponseMetadata"]["HTTPStatusCode"] != 200:
+            #     return False
+            return True
+    return
+
 async def delete_from_s3(filename) -> bool:
     async with s3_session.resource("s3") as s3:
         try:
@@ -108,4 +165,8 @@ async def delete_from_s3(filename) -> bool:
         else:
             return True
 
-# asyncio.run(delete_from_s3("a0a08203-dbc4-48e6-82ae-ff8712e74e64.jpg"))
+# asyncio.run(remove_image_from_post(["03603388-b370-4cb8-876f-998243d90384.jpg",
+#                                     "0c1de524-91f9-4709-aec0-44dcb7be2e49.jpg",
+#                                     "20c4c798-3548-492f-93af-c38156130f41.jpg",
+#                                     "2fbe284a-cab9-4230-9920-055ffcd26c09.jpg",
+#                                     "41671833-9ca3-4af0-aded-1f46f551a8a1.jpg"]))

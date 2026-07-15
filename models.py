@@ -5,11 +5,11 @@ from typing import Annotated, Optional
 #_______________________________________________________________________________________________________________________
 # db for saving data, the schema
 # listfield with dict inside
-# the dict ield data will look like {"type": "<h1>", "position": 0, "data": "some content...."}
+# the dict ield data will look like {"type": "<h1>", "position": 0, "content": "some content...."}
 PyObjectId = Annotated[str, BeforeValidator(str)]
 class MarkdownPost(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default_factory=PyObjectId)
-    email: EmailStr = Field(nullable=False, unique=True, index=True)
+    email: EmailStr = Field(...)
     post: Optional[list]
     model_config = ConfigDict(
         populate_by_name=True,
@@ -30,6 +30,7 @@ except Exception as e:
 async def get_tables():
     db = client.get_database("cluster0")
     markdown_coll = db.get_collection(name="markdownpost")
+    await markdown_coll.create_index("email")
     print(markdown_coll, "markdown?")
     return markdown_coll
 
