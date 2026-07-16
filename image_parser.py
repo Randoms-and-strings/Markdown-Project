@@ -27,7 +27,7 @@ def parse_img_from_form(picture_object_key:str, form_object_iterable: FormData) 
     new_filename = str(uuid.uuid4())
     raw_image_object.filename = f'{new_filename}.{image_extension}'
     # new_filename = raw_image_object.filename
-    print(new_filename)
+    # print(new_filename)
 
     image_max_size = 1024 * 1024 * 5  # 5mb max filesize upload
     if raw_image_object.size > image_max_size:
@@ -68,8 +68,11 @@ def parse_img_from_form(picture_object_key:str, form_object_iterable: FormData) 
 #             "content": cleaned_picture_object.filename
 #         }
 
-async def save_to_s3(cleaned_picture_object: UploadFile, element_name:str, element_position:int) -> dict[str, int]|HTTPException:
-
+# async def save_to_s3(cleaned_picture_object: UploadFile, element_name:str, element_position:int) -> dict[str, int]|HTTPException:
+async def save_to_s3(picture_data:tuple[UploadFile, str, int]) -> dict[str, int] | HTTPException:
+    cleaned_picture_object = picture_data[0]
+    element_name = picture_data[1]
+    element_position = picture_data[2]
     try:
         async with s3_session.client("s3") as obj:
             with cleaned_picture_object.file as imageBytes:
@@ -81,7 +84,7 @@ async def save_to_s3(cleaned_picture_object: UploadFile, element_name:str, eleme
                                    os.getenv("AWS_BUCKET_NAME"),
                                    f"{os.getenv("AWS_BUCKET_FOLDER")}/{cleaned_picture_object.filename}")
 
-            print(f"done successfully")
+            # print(f"done successfully")
 
     except Exception as e:
         print(e)
@@ -99,7 +102,7 @@ def get_img_s3(img_name:str) -> str:
 async def remove_image_from_post(post_content:list):
     all_img_names:list[str] = []
     for items in post_content:
-        print(items)
+        # print(items)
         post_content_type:str = items.get("type")
         if post_content_type.lower() == "img":
             all_img_names.append(items.get("content"))
@@ -108,24 +111,31 @@ async def remove_image_from_post(post_content:list):
     #
     no_of_images_in_post:int = len(all_img_names)
     if no_of_images_in_post > 1:
-        result = await batch_delete_from_s3(all_img_names)
-        if not result:
-            # todo:should return failed names list, not true
-            return False
+        delete_result:list = await asyncio.gather(*[delete_from_s3(name) for name in all_img_names], return_exceptions=True)
+        # print(delete_result)
+        for result in delete_result:
+            if isinstance(result, HTTPException):
+                return result
+        # result = await batch_delete_from_s3(all_img_names)
+        # if not result:
+        #     # todo:should return failed img names list
+        #     return False
         return True
 
-
+    # print(all_img_names)
     single_delete:bool = await delete_from_s3(all_img_names[0])
     if not single_delete:
         return HTTPException(status_code=500, detail="failed to delete an unused img from s3")
     return True
 
-    pass
+
 
 async def batch_delete_from_s3(items_to_delete:list[str]):
     async with s3_session.resource("s3") as s3:
         try:
+
             bucket = await s3.Bucket(os.getenv("S3_MARKDOWNAPP_BUCKETNAME"))
+            # asyncio.gather(*[for name in items_to_delete])
 
             for name in items_to_delete:
                 result = await bucket.objects.filter(Prefix=f'{os.getenv("S3_MARKDOWNAPP_FOLDER")}/{name}').delete()
@@ -139,7 +149,7 @@ async def batch_delete_from_s3(items_to_delete:list[str]):
             #             'server': 'AmazonS3'}, 'RetryAttempts': 0},
             #       'Deleted': [{'Key': 'markdown_app/a932ea42-99d5-4f9a-9349-3bf4abd80632.jpg'}]}]
 
-                print("done", result) #result is an empty list if the file doesnt exist, or above if success
+                # print("done", result) #result is an empty list if the file doesnt exist, or above if success
 
         except Exception as s3_delete_error:
             print(s3_delete_error)
@@ -152,16 +162,16 @@ async def batch_delete_from_s3(items_to_delete:list[str]):
             return True
     return
 
-async def delete_from_s3(filename) -> bool:
+async def delete_from_s3(filename:str) -> bool|HTTPException:
     async with s3_session.resource("s3") as s3:
         try:
             bucket = await s3.Bucket(os.getenv("S3_MARKDOWNAPP_BUCKETNAME"))
             result = await bucket.objects.filter(Prefix=f'{os.getenv("S3_MARKDOWNAPP_FOLDER")}/{filename}').delete()
-            print("done", result)
+            # print("done", result)
         except Exception as s3_delete_error:
             print(s3_delete_error)
-            return False
-            # return HTTPException(status_code=500, detail="failed to delete your file")
+            # return False
+            return HTTPException(status_code=500, detail="failed to delete your file")
         else:
             return True
 

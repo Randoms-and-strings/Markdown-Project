@@ -1,3 +1,4 @@
+import asyncio
 import time
 
 import aiohttp
@@ -26,6 +27,7 @@ rate_limiter = RateLimiter(username=os.getenv("REDIS_USERNAME"),password=os.gete
 
 @asynccontextmanager
 async def lifespans(app:FastAPI):
+
     print("redis connected successfully")
     yield
 
@@ -75,7 +77,7 @@ async def processing_page(request:Request, email:dict = Depends(rate_limiter.mai
     char_length:int = 0
     form_data:FormData = await request.form()
     last_element_position_in_form:int = int(list(form_data.items())[-1][0].split(":")[1])
-    print(form_data)
+    # print(form_data)
     # FormData([('h1:1', 'ffff'), ('img:2', UploadFile(filename='R.png', size=1802794, headers=Headers(
     #     {'content-disposition': 'form-data; name="img:2"; filename="R.png"', 'content-type': 'image/png'})))])
 
@@ -101,7 +103,9 @@ async def processing_page(request:Request, email:dict = Depends(rate_limiter.mai
                     "position": element_position,
                     "content": element_content
                 })
-        images_to_parse = []            #todo: for gathering images to s3 in one swoop
+
+        start_img_parsing_time = time.time()
+        images_to_parse:list[tuple[UploadFile, str, int]] = []
         for key in form_data:
             # print(form_data.get(items))
             if isinstance(form_data.get(key), UploadFile):
@@ -111,14 +115,22 @@ async def processing_page(request:Request, email:dict = Depends(rate_limiter.mai
                     raise element_type
                     # return f"<h1>{element_type.get("detail")}</h1>"
 
-                s3_resp:dict|HTTPException = await save_to_s3(picture_object, element_type, position)
-                # (save_to_s3,
+                # s3_resp:dict|HTTPException = await save_to_s3(picture_object, element_type, position)
+                images_to_parse.append((picture_object, element_type, position))
 
-                if isinstance(s3_resp, HTTPException):
-                    raise s3_resp
+                # if isinstance(s3_resp, HTTPException):
+                #     raise s3_resp
 
 
-                full_post.append(s3_resp)
+                # full_post.append(s3_resp)
+        group_save_img = await asyncio.gather(*[save_to_s3(items) for items in images_to_parse], return_exceptions=True)
+        # print(group_save_img)
+        for results in group_save_img:
+            if isinstance(results, HTTPException):
+                raise results #todo: saving method was non-atomic. later update for if some don't delete froms3
+            elif isinstance(results, dict):
+                full_post.append(results)
+        print(f"took {time.time() - start_img_parsing_time}secs to add img")
         # print(full_post)
         try:
             api_start_time = time.time()
@@ -139,13 +151,13 @@ async def processing_page(request:Request, email:dict = Depends(rate_limiter.mai
             if resp.get("detail") != "success":
 
                 return resp
+
+            rmv_img_time = time.time()
             post_body:list = resp.get("former_post").get("post")
             remove_old_pics_from_s3:bool = await remove_image_from_post(post_body)
-            if not remove_old_pics_from_s3:
-                print("failed to delete former img from s3. solve this and find out why")
-            # return {
-            #     "h1": full_post
-            # }
+            if isinstance(remove_old_pics_from_s3, HTTPException):
+                print("failed to delete former img from s3. log this and find out why")
+            print(f"took {time.time() - rmv_img_time}secs to remove img")
             print(f"the function took {time.time() - start_time } secs to complete")
             return RedirectResponse(url=f"/post/{email}", status_code=status.HTTP_302_FOUND)
     # don't know how this can happen, but incase it can....
@@ -154,7 +166,9 @@ async def processing_page(request:Request, email:dict = Depends(rate_limiter.mai
 
 @app.get("/post/{user_email}")
 async def get_markdown(request:Request, user_email:str):
+    api_start_time = time.time()
     user_post = None
+    # todo: could implement redis for faster post lookup
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(f"{API_HOST}:{API_PORT}/get-user-post/{user_email}") as response:
@@ -172,6 +186,7 @@ async def get_markdown(request:Request, user_email:str):
         # }
         user_post = resp.get("user_data").get("post")
         print(user_post)
+    print(f"view markdown api took {time.time() - api_start_time} secs to complete")
     elements_present:list[Markup] = []
 
     for items in user_post:
@@ -196,7 +211,7 @@ async def get_markdown(request:Request, user_email:str):
             img_link:str = get_img_s3(img_name)
             elements_present.append(Markup(f"<img src={img_link} alt=''/>"))
             # get from s3
-
+    print(f"view markdown function took {time.time() - api_start_time} secs to complete")
     return templates.TemplateResponse(request=request, name="markdown.html",
                                       context={"allowed_elements":elements_present,
                                                "user_data": user_post})

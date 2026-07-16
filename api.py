@@ -96,7 +96,7 @@ async def get_post(user_id:str):
 
 @app.get("/user/create_new", status_code=201,response_model_by_alias=False)                #
 async def create_markdown_user(q: str):
-    print(q)#
+    # print(q)#
     if q:
 
         user = await markdown_collection.update_one({"email":q}, { "$setOnInsert": { "post": None} }, upsert=True)
