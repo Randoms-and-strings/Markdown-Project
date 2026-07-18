@@ -1,10 +1,85 @@
 services:
   frontend:
-    build: .
+    container_name: markdown-app-frontend
+    build: ./frontend
+    volumes:
+      - .:/frontend-markdownapp
     ports:
       - "${APP_PORT}:8000"
-    env_file: ["./.env"]
+    env_file: ["./frontend/.env"]
+    depends_on:
+      markdown-app-backend:
+        condition: service_started
+      markdown-app-redis:
+        condition: service_healthy
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./frontend
+          target: /frontend-markdownapp
+        - action: rebuild
+          path: requirements.txt
+
   backend:
+    container_name: markdown-app-backend
+    build: ./backend
+    volumes:
+      - .:/backend-markdownapp
+    ports:
+      - "${API_PORT}:8001"
+    env_file: [ "./backend/.env" ]
+    depends_on:
+      markdown-app-mongodb:
+        condition: service_healthy
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./backend
+          target: /backend-markdownapp
+        - action: rebuild
+          path: requirements.txt
+
 
   redis:
     image: redis:alpine
+    container_name: markdown-app-redis
+    ports:
+      - "${REDIS_PORT}:${REDIS_PORT}"
+    env_file: ["./frontend.env"]
+    environment:
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+    volumes:
+      [redis-data:/data]
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  mongodb:
+    image: mongodb/mongodb-atlas-local
+    ports:
+      - "27017:27017"
+    hostname: mongodb
+    environment:
+      - MONGODB_INITDB_ROOT_USERNAME=${MONGODB_USERNAME}
+      - MONGODB_INITDB_ROOT_PASSWORD=${MONGODB_PASSWORD}
+      - MONGO_URL=mongodb://mongodb:${MONGODB_PORT}/markdown_app
+    container_name: markdown-app-mongodb
+    volumes:
+      - ./init:/docker-entrypoint-initdb.d
+        - db:/data/db
+        - configdb:/data/configdb
+
+
+volumes:
+    redis-data:
+        driver: local
+#    mongodb:
+#      external:
+    db:
+    configdb:
+
+

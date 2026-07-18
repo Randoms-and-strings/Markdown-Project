@@ -20,7 +20,7 @@ load_dotenv()
 
 API_PORT:int = os.getenv("API_PORT")
 API_HOST:str = os.getenv("API_HOST")
-MAX_POST_LENGTH:int = 10
+MAX_POST_LENGTH:int = 10000
 rate_limiter = RateLimiter(username=os.getenv("REDIS_USERNAME"),password=os.getenv("REDIS_PASSWORD"),
                 host=os.getenv("REDIS_HOST"),port=os.getenv("REDIS_PORT"))
 
