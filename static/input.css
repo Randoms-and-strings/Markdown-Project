@@ -107,7 +107,7 @@ li:focus {
   outline: none;
 }
 ul {
-  border: 1px solid black;
+  border: 0px;
   width: calc(80% - 40px);
   margin-left: calc(50% - calc(40% - 5px));
 }
@@ -125,7 +125,8 @@ ul {
   margin-left: calc(50% - 40%);
 }
 .remove-borders{
-  border: 0px solid black;
+  border: 0px;
+  border-width:0px;
 }
 .image-div{
   background-color: black;
@@ -149,6 +150,7 @@ ul {
 }
 .ul-div {
   margin-bottom: 3rem;
+  border:0px
 }
 .image-div > img {
   width: 100%;

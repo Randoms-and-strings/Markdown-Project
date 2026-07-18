@@ -272,6 +272,7 @@ function addClassesToElement(fromElement, toElement){
 }
 
 function removeBorder(event){
+//console.log("border remove")
         if(event.target.value.trim().length > 0){
             // console.log("condition");
             event.target.classList.add("remove-borders");
@@ -304,27 +305,41 @@ function expandInputField(event){
 
         newTextArea.addEventListener("input", increaseTextAreaHeight);
         newTextArea.addEventListener("keydown", backspaceDeleteRowsTextArea);
+        newTextArea.addEventListener("focusout", removeBorder);
         event.target.replaceWith(newTextArea);
         newTextArea.focus();
+        const rect = newTextArea.getBoundingClientRect();
+        simulated_event = {
+            target: newTextArea,
+        };
+        increaseTextAreaHeight(simulated_event);
     }
 }
 
 function increaseTextAreaHeight(event){
-    console.log(event.target.scrollHeight, event.target.clientHeight);
+//    console.log(event.target.scrollHeight, event.target.clientHeight);
     if(event.target.scrollHeight > event.target.clientHeight){
-        // console.log("yes");
+        // my original solution
         let rowSize = parseInt(event.target.getAttribute("rows")) + 1;
         // console.log(textArea.getAttribute("rows"), rowSize);
+        event.target.rows = `${rowSize}`;
         event.target.setAttribute("rows", `${rowSize}`);
-        // dont really know why this works, but it works....
-            event.target.dispatchEvent(new Event('input', { 'bubbles': true }))
-       
+        increaseTextAreaHeight(event);
+//           dont really know why this works, but it works....
+//            event.target.dispatchEvent(new Event('input', { 'bubbles': true }))
+
+//        online solution
+//        event.target.style.height = '0';
+//
+//        event.target.style.height = (textarea.scrollHeight + 16) + 'px'
+
     }
 }
 
 function backspaceDeleteRowsTextArea(event){
     if(event.key === "Backspace" || event.key === "Delete"){
-        if(event.target.value[event.target.value.length - 1] == "\n"){
+        const rect = event.target.getBoundingClientRect();
+        if(event.target.value[event.target.value.length - 1] == "\n" ){
             let currentTextRows = event.target.rows;
             let newTextRows = parseInt(currentTextRows) - 1;
             event.target.setAttribute("rows", `${newTextRows}`);

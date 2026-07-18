@@ -20,7 +20,7 @@ load_dotenv()
 
 API_PORT:int = 8001
 API_HOST:str = "http://127.0.0.1"
-MAX_POST_LENGTH:int = 10000
+MAX_POST_LENGTH:int = 10
 rate_limiter = RateLimiter(username=os.getenv("REDIS_USERNAME"),password=os.getenv("REDIS_PASSWORD"),
                 host=os.getenv("REDIS_HOST"),port=os.getenv("REDIS_PORT"))
 
@@ -152,6 +152,7 @@ async def processing_page(request:Request, email:dict = Depends(rate_limiter.mai
 
                 return resp
 
+            # todo: no need to remove old post from s3 here, it can be pushed to queue to save time
             rmv_img_time = time.time()
             post_body:list = resp.get("former_post").get("post")
             remove_old_pics_from_s3:bool = await remove_image_from_post(post_body)
@@ -191,25 +192,25 @@ async def get_markdown(request:Request, user_email:str):
 
     for items in user_post:
         if items.get("type") == "h1":
-            elements_present.append(Markup(f"<h1>{items.get('content')}</h1>"))
+            elements_present.append(Markup(f"<h1 class='gelasio-head center-elements'>{items.get('content')}</h1>"))
         elif items.get("type") == "h2":
-            elements_present.append(Markup(f"<h2>{items.get('content')}</h2>"))
+            elements_present.append(Markup(f"<h2 class='gelasio-head center-elements'>{items.get('content')}</h2>"))
         elif items.get("type") == "p":
-            elements_present.append(Markup(f"<p>{items.get('content')}</p>"))
+            elements_present.append(Markup(f"<p class='gelasio-body center-elements'>{items.get('content')}</p>"))
         elif items.get("type") == "ul":
             all_li_items:list[str] = items.get("content").split("/<newlinechar>")
             # print(all_li_items)
             arrangement:str = ""
             for li in all_li_items[:-1]:  #the split added "" at the end of the list, so had to exclude that
-                arrangement += f"<li>{li}</li>\n"
+                arrangement += f"<li class='gelasio-body'>{li}</li>\n"
             # print(arrangement)
-            elements_present.append(Markup(f"<ul>"
+            elements_present.append(Markup(f"<ul class='center-elements'>"
                                            f"{arrangement}"
                                            f"</ul>"))
         elif items.get("type") == "img":
             img_name:str = items.get("content")
             img_link:str = get_img_s3(img_name)
-            elements_present.append(Markup(f"<img src={img_link} alt=''/>"))
+            elements_present.append(Markup(f"<img class='img-styling' src={img_link} alt=''/>"))
             # get from s3
     print(f"view markdown function took {time.time() - api_start_time} secs to complete")
     return templates.TemplateResponse(request=request, name="markdown.html",

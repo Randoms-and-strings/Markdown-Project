@@ -1,3 +1,5 @@
+import time
+
 from starlette.datastructures import FormData
 from fastapi import HTTPException, UploadFile
 import os
@@ -74,15 +76,19 @@ async def save_to_s3(picture_data:tuple[UploadFile, str, int]) -> dict[str, int]
     element_name = picture_data[1]
     element_position = picture_data[2]
     try:
+        start_opening_file = time.time()
         async with s3_session.client("s3") as obj:
             with cleaned_picture_object.file as imageBytes:
                 # contents:bytes =imageBytes.read()
                 # print(contents, imageBytes)
                 imageBytes.seek(0)
+                print(f"time taken to open one file is {time.time() - start_opening_file}")
 
+                send_start_time = time.time()
                 await obj.upload_fileobj(imageBytes,
                                    os.getenv("AWS_BUCKET_NAME"),
                                    f"{os.getenv("AWS_BUCKET_FOLDER")}/{cleaned_picture_object.filename}")
+                print(f"time taken to send one file is {time.time() - send_start_time}")
 
             # print(f"done successfully")
 
@@ -111,8 +117,10 @@ async def remove_image_from_post(post_content:list):
     #
     no_of_images_in_post:int = len(all_img_names)
     if no_of_images_in_post > 1:
+        batch_delete_time = time.time()
         delete_result:list = await asyncio.gather(*[delete_from_s3(name) for name in all_img_names], return_exceptions=True)
         # print(delete_result)
+        print(f"time taken to batch delete file is {time.time() - batch_delete_time}")
         for result in delete_result:
             if isinstance(result, HTTPException):
                 return result
@@ -163,11 +171,13 @@ async def batch_delete_from_s3(items_to_delete:list[str]):
     return
 
 async def delete_from_s3(filename:str) -> bool|HTTPException:
+    start_delete_time = time.time()
     async with s3_session.resource("s3") as s3:
         try:
             bucket = await s3.Bucket(os.getenv("S3_MARKDOWNAPP_BUCKETNAME"))
             result = await bucket.objects.filter(Prefix=f'{os.getenv("S3_MARKDOWNAPP_FOLDER")}/{filename}').delete()
             # print("done", result)
+            print(f"time taken to delete one file is {time.time() - start_delete_time}")
         except Exception as s3_delete_error:
             print(s3_delete_error)
             # return False
