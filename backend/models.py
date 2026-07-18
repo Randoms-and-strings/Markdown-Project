@@ -1,3 +1,5 @@
+import os
+from dotenv import load_dotenv
 import pymongo
 from pydantic import BaseModel, Field, EmailStr, ConfigDict, BeforeValidator
 from bson import ObjectId
@@ -6,6 +8,7 @@ from typing import Annotated, Optional
 # db for saving data, the schema
 # listfield with dict inside
 # the dict ield data will look like {"type": "<h1>", "position": 0, "content": "some content...."}
+load_dotenv()
 PyObjectId = Annotated[str, BeforeValidator(str)]
 class MarkdownPost(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default_factory=PyObjectId)
@@ -17,7 +20,7 @@ class MarkdownPost(BaseModel):
         json_encoders={ObjectId: str},
     )
 
-url = "mongodb+srv://randoms_and_strings:randoms&str1ngs@cluster0.6yeazny.mongodb.net/?appName=Cluster0"
+url = os.getenv("MONGODB_URL")
 
 client = pymongo.AsyncMongoClient(url,server_api=pymongo.server_api.ServerApi(version="1", strict=True,deprecation_errors=True))
 try:

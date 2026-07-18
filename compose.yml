@@ -1,0 +1,10 @@
+services:
+  frontend:
+    build: .
+    ports:
+      - "${APP_PORT}:8000"
+    env_file: ["./.env"]
+  backend:
+
+  redis:
+    image: redis:alpine

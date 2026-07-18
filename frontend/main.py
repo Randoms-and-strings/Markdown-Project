@@ -18,8 +18,8 @@ from markupsafe import Markup
 load_dotenv()
 
 
-API_PORT:int = 8001
-API_HOST:str = "http://127.0.0.1"
+API_PORT:int = os.getenv("API_PORT")
+API_HOST:str = os.getenv("API_HOST")
 MAX_POST_LENGTH:int = 10
 rate_limiter = RateLimiter(username=os.getenv("REDIS_USERNAME"),password=os.getenv("REDIS_PASSWORD"),
                 host=os.getenv("REDIS_HOST"),port=os.getenv("REDIS_PORT"))

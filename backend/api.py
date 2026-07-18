@@ -1,13 +1,10 @@
 # api to save info in db
 # api to get info from db
 # uvicorn api:app --host 0.0.0.0 --port 8001 --reload
-from bson import ObjectId
-from fastapi import FastAPI, HTTPException, Request, Depends, Path
+from fastapi import FastAPI, HTTPException, Request
 from pymongo import ReturnDocument
-from models import get_tables, client, MarkdownPost
+from models import get_tables, client
 from contextlib import asynccontextmanager
-from rate_limiter import RateLimiter
-import os
 from dotenv import load_dotenv
 
 load_dotenv()
