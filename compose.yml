@@ -74,6 +74,11 @@ services:
       - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
       - mongo-data:/data/db
       - mongo-config:/data/configdb
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./mongo-init.js
+          target: /docker-entrypoint-initdb.d/mongo-init.js
     healthcheck:
 #      test: echo 'db.runCommand("ping").ok' | mongo mongo:27017/test --quiet
       test: [ "CMD","mongosh", "--eval", "db.adminCommand('ping')" ]

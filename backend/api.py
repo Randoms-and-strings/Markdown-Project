@@ -2,9 +2,9 @@
 # api to get info from db
 # uvicorn api:app --host 0.0.0.0 --port 8001 --reload
 from fastapi import FastAPI, HTTPException, Request
-import collections
-from collections import abc
-collections.MutableMapping = abc.MutableMapping
+# import collections
+# from collections import abc
+# collections.MutableMapping = abc.MutableMapping
 from pymongo import ReturnDocument
 from .models import get_tables, client
 from contextlib import asynccontextmanager
