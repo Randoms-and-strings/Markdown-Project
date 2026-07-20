@@ -1,7 +1,8 @@
 FROM python:3.14-alpine
 WORKDIR /backend-markdownapp
-COPY ./backend/requirements.txt requirements.txt
+COPY ./requirements.txt requirements.txt
 RUN pip install -r requirements.txt
-COPY ./backend .
+RUN pip install fastapi[standard]
+COPY . .
 EXPOSE 8001
-CMD ["uvicorn", "api:app", "--host 0.0.0.0", "--${API_PORT}"]
+CMD ["fastapi", "run", "./api.py", "--port", "8001"]

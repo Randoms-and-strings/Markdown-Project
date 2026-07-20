@@ -31,6 +31,7 @@ except Exception as e:
     raise Exception("Unable to find the document due to the following error: ", e)
 
 async def get_tables():
+
     db = client.get_database("cluster0")
     markdown_coll = db.get_collection(name="markdownpost")
     await markdown_coll.create_index("email")

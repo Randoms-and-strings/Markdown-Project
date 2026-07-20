@@ -2,10 +2,14 @@
 # api to get info from db
 # uvicorn api:app --host 0.0.0.0 --port 8001 --reload
 from fastapi import FastAPI, HTTPException, Request
+import collections
+from collections import abc
+collections.MutableMapping = abc.MutableMapping
 from pymongo import ReturnDocument
-from models import get_tables, client
+from .models import get_tables, client
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
+
 
 load_dotenv()
 
@@ -18,8 +22,8 @@ markdown_collection = None
 async def lifespans(app:FastAPI):
     global markdown_collection
 
-    markdown_collection = await get_tables()
     yield
+    markdown_collection = await get_tables()
 
     # await rate_limiter.close_redis()
     await client.close()

@@ -9,10 +9,10 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, RedirectResponse
 from starlette.datastructures import FormData, UploadFile
 import starlette.status as status
-from image_parser import parse_img_from_form, save_to_s3, get_img_s3, remove_image_from_post
+from .image_parser import parse_img_from_form, save_to_s3, get_img_s3, remove_image_from_post
 from dotenv import load_dotenv
 from fastapi.params import Depends
-from rate_limiter import RateLimiter
+from .rate_limiter import RateLimiter
 from contextlib import asynccontextmanager
 from markupsafe import Markup
 load_dotenv()
