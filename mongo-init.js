@@ -1,11 +1,9 @@
-db.createCollection("markdownpost");
-
-db.markdownpost.insertMany({
-    email: "tobi@gmailcom",
-    post: ["hhhhh", "uuuuuu"],
-    },
-    {
-    email: "tobi2@gmailcom",
-    post: ["hhheh", "uuueuu"],
-    }
-    );
+db = db.getSiblingDB("cluster0");
+db.createUser({
+    user: "randomsandstrings",
+    pwd: "randoms&str1ngs",
+    roles: [{
+        role: "dbOwner",
+        db: "cluster0"
+    }]
+});

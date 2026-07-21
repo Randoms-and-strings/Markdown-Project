@@ -68,7 +68,7 @@ services:
       - MONGODB_INITDB_ROOT_USERNAME=${MONGODB_USERNAME}
       - MONGODB_INITDB_ROOT_PASSWORD=${MONGODB_PASSWORD}
 #      - MONGO_URL=mongodb://mongodb:${MONGODB_PORT}/markdown_app
-      - MONGO_INITDB_DATABASE= ${MONGODB_DB}
+      - MONGO_INITDB_DATABASE=${MONGODB_DB}
     container_name: markdown-app-mongodb
     volumes:
       - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
@@ -76,7 +76,7 @@ services:
       - mongo-config:/data/configdb
     develop:
       watch:
-        - action: sync+restart
+        - action: rebuild
           path: ./mongo-init.js
           target: /docker-entrypoint-initdb.d/mongo-init.js
     healthcheck:

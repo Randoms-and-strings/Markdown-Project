@@ -21,9 +21,9 @@ markdown_collection = None
 @asynccontextmanager
 async def lifespans(app:FastAPI):
     global markdown_collection
-
-    yield
     markdown_collection = await get_tables()
+    yield
+
 
     # await rate_limiter.close_redis()
     await client.close()
