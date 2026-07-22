@@ -93,3 +93,9 @@ pip-log.txt
 .python-version
 .scrapy
 .webassets-cache
+
+#env variables
+.env
+.aws/*
+
+mongo-init.js

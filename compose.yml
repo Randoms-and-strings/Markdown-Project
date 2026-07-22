@@ -4,6 +4,7 @@ services:
     build: ./frontend
     volumes:
       - ./frontend:/frontend-markdownapp
+      - ./frontend/.aws:/root/.aws:ro
     ports:
       - "${APP_PORT}:8000"
     env_file: ["./frontend/.env"]
@@ -28,6 +29,12 @@ services:
     ports:
       - "${API_PORT}:8001"
     env_file: [ "./backend/.env" ]
+#    healthcheck:
+#      test: [ "CMD", "curl", "-f", "http://markdown-app-backend:8001/user/create_new?q=tobi@gmail.com" ]
+#      interval: 30s
+#      timeout: 10s
+#      retries: 5
+#      start_period: 20s
     depends_on:
       mongodb:
         condition: service_healthy
