@@ -2,13 +2,18 @@ import redis.asyncio as redis
 from fastapi import FastAPI, HTTPException, Path
 
 class RateLimiter:
-    def __init__(self, port, username, password, host):
+    def __init__(self, port, host):
+        # self.r = redis.Redis(
+        #     host=host,
+        #     port=port,
+        #     decode_responses=True,
+        #     username=username,
+        #     password=password,
+        # )
         self.r = redis.Redis(
             host=host,
             port=port,
             decode_responses=True,
-            username=username,
-            password=password,
         )
 
     async def check_request(self, user_email) -> bool:

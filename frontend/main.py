@@ -21,9 +21,9 @@ load_dotenv()
 API_PORT:int = os.getenv("API_PORT")
 API_HOST:str = os.getenv("API_HOST")
 MAX_POST_LENGTH:int = 10000
-rate_limiter = RateLimiter(username=os.getenv("REDIS_USERNAME"),password=os.getenv("REDIS_PASSWORD"),
-                host=os.getenv("REDIS_HOST"),port=os.getenv("REDIS_PORT"))
-
+# rate_limiter = RateLimiter(username=os.getenv("REDIS_USERNAME"),password=os.getenv("REDIS_PASSWORD"),
+#                 host=os.getenv("REDIS_HOST"),port=os.getenv("REDIS_PORT"))
+rate_limiter = RateLimiter(host=os.getenv("REDIS_HOST"),port=os.getenv("REDIS_PORT"))
 
 @asynccontextmanager
 async def lifespans(app:FastAPI):
@@ -42,9 +42,10 @@ templates = Jinja2Templates(directory="templates")
 #use email as userid when displaying form
 @app.get("/markdown-form/{user_email}", response_class=HTMLResponse)
 async def markdown_form(request:Request, user_email:str):
+    print("markdown func")
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(F"{API_HOST}:{API_PORT}/user/create_new", params={"q": user_email}) as response:
+        async with aiohttp.ClientSession(trust_env=True) as session:
+            async with session.get(f"http://{API_HOST}:{API_PORT}/user/create_new", params={"q": user_email}) as response:
                 # print("here1")
                 resp = await response.json()
                 # print("done new account", resp)
@@ -115,12 +116,7 @@ async def processing_page(request:Request, email:dict = Depends(rate_limiter.mai
                     raise element_type
                     # return f"<h1>{element_type.get("detail")}</h1>"
 
-                # s3_resp:dict|HTTPException = await save_to_s3(picture_object, element_type, position)
                 images_to_parse.append((picture_object, element_type, position))
-
-                # if isinstance(s3_resp, HTTPException):
-                #     raise s3_resp
-
 
                 # full_post.append(s3_resp)
         group_save_img = await asyncio.gather(*[save_to_s3(items) for items in images_to_parse], return_exceptions=True)
@@ -136,7 +132,7 @@ async def processing_page(request:Request, email:dict = Depends(rate_limiter.mai
             api_start_time = time.time()
             full_post.sort(key=lambda item: item.get("position"))
             async with aiohttp.ClientSession() as session:
-                async with session.post(f"{API_HOST}:{API_PORT}/user/add_post/{email}",
+                async with session.post(f"http://{API_HOST}:{API_PORT}/user/add_post/{email}",
                                         json=full_post) as response:
                     # print("here1")
                     resp = await response.json()
@@ -172,7 +168,7 @@ async def get_markdown(request:Request, user_email:str):
     # todo: could implement redis for faster post lookup
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(f"{API_HOST}:{API_PORT}/get-user-post/{user_email}") as response:
+            async with session.get(f"http://{API_HOST}:{API_PORT}/get-user-post/{user_email}") as response:
                 resp = await response.json()
                 # print("the resp from getting the post:", resp)
     except Exception as err:
@@ -181,10 +177,7 @@ async def get_markdown(request:Request, user_email:str):
     else:
         if not resp.get("status"):
             raise HTTPException(status_code=400, detail="something went wrong with your upload")
-            # return f"<h1>{resp.get("detail")}</h1>"
-        # return {
-        #     "the_post": resp.get("user_data")
-        # }
+
         user_post = resp.get("user_data").get("post")
         print(user_post)
     print(f"view markdown api took {time.time() - api_start_time} secs to complete")
@@ -217,4 +210,4 @@ async def get_markdown(request:Request, user_email:str):
                                       context={"allowed_elements":elements_present,
                                                "user_data": user_post})
 
-# style the page that displays markdown
+
