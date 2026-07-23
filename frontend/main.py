@@ -1,6 +1,5 @@
 import asyncio
 import time
-
 import aiohttp
 import os
 from fastapi import FastAPI, HTTPException, Request, UploadFile
@@ -20,10 +19,14 @@ load_dotenv()
 
 API_PORT:int = os.getenv("API_PORT")
 API_HOST:str = os.getenv("API_HOST")
+REDIS_HOST:str = os.getenv("REDIS_HOST")
+REDIS_PORT:int = os.getenv("REDIS_PORT")
 MAX_POST_LENGTH:int = 10000
+
+
 # rate_limiter = RateLimiter(username=os.getenv("REDIS_USERNAME"),password=os.getenv("REDIS_PASSWORD"),
 #                 host=os.getenv("REDIS_HOST"),port=os.getenv("REDIS_PORT"))
-rate_limiter = RateLimiter(host=os.getenv("REDIS_HOST"),port=os.getenv("REDIS_PORT"))
+rate_limiter = RateLimiter(host=REDIS_HOST,port=REDIS_PORT)
 
 @asynccontextmanager
 async def lifespans(app:FastAPI):

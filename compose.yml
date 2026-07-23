@@ -4,13 +4,18 @@ services:
     build: ./frontend
     volumes:
       - ./frontend:/frontend-markdownapp
-      - ./frontend/.aws:/root/.aws:ro
     ports:
       - "${APP_PORT}:8000"
+    environment:
+#        could have put this in the env frontend file, but just for my own clarity sake
+#       note: the naming of the key is essential, else wont work. both here or in env file
+      - AWS_ACCESS_KEY_ID=${ACCESS_KEY}
+      - AWS_SECRET_ACCESS_KEY=${SECRET_KEY}
+      - AWS_DEFAULT_REGION=${S3_MARKDOWNAPP_REGION}
     env_file: ["./frontend/.env"]
     depends_on:
       backend:
-        condition: service_started
+        condition: service_healthy
       redis:
         condition: service_healthy
     develop:
@@ -29,12 +34,12 @@ services:
     ports:
       - "${API_PORT}:8001"
     env_file: [ "./backend/.env" ]
-#    healthcheck:
-#      test: [ "CMD", "curl", "-f", "http://markdown-app-backend:8001/user/create_new?q=tobi@gmail.com" ]
-#      interval: 30s
-#      timeout: 10s
-#      retries: 5
-#      start_period: 20s
+    healthcheck:
+      test: [ "CMD", "wget", "--spider", "-q", "http://markdown-app-backend:8001/user/create_new?q=tobi@gmail.com" ]
+      interval: 5s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
     depends_on:
       mongodb:
         condition: service_healthy
@@ -74,8 +79,9 @@ services:
     environment:
       - MONGODB_INITDB_ROOT_USERNAME=${MONGODB_USERNAME}
       - MONGODB_INITDB_ROOT_PASSWORD=${MONGODB_PASSWORD}
-#      - MONGO_URL=mongodb://mongodb:${MONGODB_PORT}/markdown_app
       - MONGO_INITDB_DATABASE=${MONGODB_DB}
+      - CUSTOM_USERNAME=${MONGODB_CUSTOM_USERNAME}
+      - CUSTOM_PASSWORD=${MONGODB_PASSWORD}
     container_name: markdown-app-mongodb
     volumes:
       - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
@@ -87,7 +93,6 @@ services:
           path: ./mongo-init.js
           target: /docker-entrypoint-initdb.d/mongo-init.js
     healthcheck:
-#      test: echo 'db.runCommand("ping").ok' | mongo mongo:27017/test --quiet
       test: [ "CMD","mongosh", "--eval", "db.adminCommand('ping')" ]
       interval: 5s
       timeout: 120s

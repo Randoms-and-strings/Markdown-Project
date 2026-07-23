@@ -10,6 +10,8 @@ from typing import Annotated, Optional
 # the dict ield data will look like {"type": "<h1>", "position": 0, "content": "some content...."}
 load_dotenv()
 PyObjectId = Annotated[str, BeforeValidator(str)]
+URL = os.getenv("MONGODB_URL")
+
 class MarkdownPost(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default_factory=PyObjectId)
     email: EmailStr = Field(...)
@@ -20,9 +22,8 @@ class MarkdownPost(BaseModel):
         json_encoders={ObjectId: str},
     )
 
-url = os.getenv("MONGODB_URL")
 
-client = pymongo.AsyncMongoClient(url,server_api=pymongo.server_api.ServerApi(version="1", strict=True,deprecation_errors=True))
+client = pymongo.AsyncMongoClient(URL,server_api=pymongo.server_api.ServerApi(version="1", strict=True,deprecation_errors=True))
 try:
 
     client.admin.command("ping")
@@ -31,12 +32,10 @@ except Exception as e:
     raise Exception("Unable to find the document due to the following error: ", e)
 
 async def get_tables():
-
     db = client.get_database("cluster0")
     markdown_coll = db.get_collection(name="markdownpost")
     await markdown_coll.create_index("email")
     print(markdown_coll, "markdown?")
     return markdown_coll
 
-# markdown_collection = get_tables()
 

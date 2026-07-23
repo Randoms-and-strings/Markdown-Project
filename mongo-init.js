@@ -1,9 +1,13 @@
-db = db.getSiblingDB("cluster0");
+const database = process.env.MONGO_INITDB_DATABASE
+const customUsername = process.env.CUSTOM_USERNAME
+const customPassword = process.env.CUSTOM_PASSWORD
+
+db = db.getSiblingDB(database);
 db.createUser({
-    user: "randomsandstrings",
-    pwd: "randoms&str1ngs",
+    user: customUsername,
+    pwd: customPassword,
     roles: [{
         role: "dbOwner",
-        db: "cluster0"
+        db: database
     }]
 });

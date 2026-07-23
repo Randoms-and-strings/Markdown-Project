@@ -220,10 +220,3 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
-
-#aws
-.aws
-.aws/*
-
-#docker stuff
-mongo-init.js

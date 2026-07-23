@@ -11,10 +11,14 @@ load_dotenv()
 
 
 s3_session = aioboto3.Session()
+S3_FOLDER_NAME = os.getenv("S3_MARKDOWNAPP_FOLDER")
+S3_BUCKETNAME = os.getenv("S3_MARKDOWNAPP_BUCKETNAME")
+S3_REGION = os.getenv("S3_MARKDOWNAPP_REGION")
+S3_BUCKET_URL = (f"https://{S3_BUCKETNAME}.s3."
+                 f"{S3_REGION}.amazonaws.com/"
+                 f"{S3_FOLDER_NAME}")
 
-S3_BUCKET_URL = (f"https://{os.getenv("S3_MARKDOWNAPP_BUCKETNAME")}.s3."
-                 f"{os.getenv("S3_MARKDOWNAPP_REGION")}.amazonaws.com/"
-                 f"{os.getenv("S3_MARKDOWNAPP_FOLDER")}")
+
 
 def parse_img_from_form(picture_object_key:str, form_object_iterable: FormData) -> tuple[str, int, UploadFile] | tuple[HTTPException, None, None]:
     element_type = picture_object_key.split(":")[0]
@@ -48,8 +52,8 @@ async def save_to_s3(picture_data:tuple[UploadFile, str, int]) -> dict[str, int]
 
                 send_start_time = time.time()
                 await obj.upload_fileobj(imageBytes,
-                                   os.getenv("AWS_BUCKET_NAME"),
-                                   f"{os.getenv("AWS_BUCKET_FOLDER")}/{cleaned_picture_object.filename}")
+                                   S3_BUCKETNAME,
+                                   f"{S3_FOLDER_NAME}/{cleaned_picture_object.filename}")
                 print(f"time taken to send one file is {time.time() - send_start_time}")
 
             # print(f"done successfully")
@@ -106,11 +110,11 @@ async def batch_delete_from_s3(items_to_delete:list[str]):
     async with s3_session.resource("s3") as s3:
         try:
 
-            bucket = await s3.Bucket(os.getenv("S3_MARKDOWNAPP_BUCKETNAME"))
+            bucket = await s3.Bucket(S3_BUCKETNAME)
             # asyncio.gather(*[for name in items_to_delete])
 
             for name in items_to_delete:
-                result = await bucket.objects.filter(Prefix=f'{os.getenv("S3_MARKDOWNAPP_FOLDER")}/{name}').delete()
+                result = await bucket.objects.filter(Prefix=f'{S3_FOLDER_NAME}/{name}').delete()
 
                 # print("done", result) #result is an empty list if the file doesnt exist, or above if success
 
@@ -129,8 +133,8 @@ async def delete_from_s3(filename:str) -> bool|HTTPException:
     start_delete_time = time.time()
     async with s3_session.resource("s3") as s3:
         try:
-            bucket = await s3.Bucket(os.getenv("S3_MARKDOWNAPP_BUCKETNAME"))
-            result = await bucket.objects.filter(Prefix=f'{os.getenv("S3_MARKDOWNAPP_FOLDER")}/{filename}').delete()
+            bucket = await s3.Bucket(S3_BUCKETNAME)
+            result = await bucket.objects.filter(Prefix=f'{S3_FOLDER_NAME}/{filename}').delete()
             # print("done", result)
             print(f"time taken to delete one file is {time.time() - start_delete_time}")
         except Exception as s3_delete_error:

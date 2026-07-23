@@ -97,5 +97,3 @@ pip-log.txt
 #env variables
 .env
 .aws/*
-
-mongo-init.js

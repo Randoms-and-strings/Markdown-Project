@@ -2,21 +2,12 @@
 # api to get info from db
 # uvicorn api:app --host 0.0.0.0 --port 8001 --reload
 from fastapi import FastAPI, HTTPException, Request
-# import collections
-# from collections import abc
-# collections.MutableMapping = abc.MutableMapping
 from pymongo import ReturnDocument
 from .models import get_tables, client
 from contextlib import asynccontextmanager
-from dotenv import load_dotenv
 
-
-load_dotenv()
 
 markdown_collection = None
-# rate_limiter = RateLimiter(username=os.getenv("REDIS_USERNAME"),password=os.getenv("REDIS_PASSWORD"),
-#                 host=os.getenv("REDIS_HOST"),port=os.getenv("REDIS_PORT"))
-
 
 @asynccontextmanager
 async def lifespans(app:FastAPI):
@@ -24,9 +15,8 @@ async def lifespans(app:FastAPI):
     markdown_collection = await get_tables()
     yield
 
+    await client.aclose()
 
-    # await rate_limiter.close_redis()
-    await client.close()
 
 
 app = FastAPI(lifespan=lifespans)
@@ -36,18 +26,12 @@ app = FastAPI(lifespan=lifespans)
 
 @app.post("/user/add_post/{email}", status_code=201,response_model_by_alias=False)
 async def create_markdown_post(request: Request, email:str):
-    # print(type(email))
-    # if isinstance(email, HTTPException):
-    #     print("returning error")
-    #     return email
+
     try:
         data = await request.json() #validate for if an idiot sends request not in json
     except Exception as error:
         print(error)
         return HTTPException(status_code=409, detail=f"expected json, received other data type")
-    # else:
-    #     data.sort(key= lambda item: item.get("position"))
-        # print(data)
 
 
     try:
