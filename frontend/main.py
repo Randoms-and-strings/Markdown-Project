@@ -19,6 +19,7 @@ load_dotenv()
 
 API_PORT:int = os.getenv("API_PORT")
 API_HOST:str = os.getenv("API_HOST")
+API_FULL_URL:str = os.getenv("API_URL")
 REDIS_HOST:str = os.getenv("REDIS_HOST")
 REDIS_PORT:int = os.getenv("REDIS_PORT")
 MAX_POST_LENGTH:int = 10000
@@ -48,7 +49,8 @@ async def markdown_form(request:Request, user_email:str):
     print("markdown func")
     try:
         async with aiohttp.ClientSession(trust_env=True) as session:
-            async with session.get(f"http://{API_HOST}:{API_PORT}/user/create_new", params={"q": user_email}) as response:
+            async with session.get(f"https://{API_FULL_URL}/user/create_new", params={"q": user_email}) as response:
+            # async with session.get(f"http://{API_HOST}:{API_PORT}/user/create_new", params={"q": user_email}) as response:
                 # print("here1")
                 resp = await response.json()
                 # print("done new account", resp)
@@ -135,7 +137,9 @@ async def processing_page(request:Request, email:dict = Depends(rate_limiter.mai
             api_start_time = time.time()
             full_post.sort(key=lambda item: item.get("position"))
             async with aiohttp.ClientSession() as session:
-                async with session.post(f"http://{API_HOST}:{API_PORT}/user/add_post/{email}",
+                # async with session.post(f"http://{API_HOST}:{API_PORT}/user/add_post/{email}",
+                #                         json=full_post) as response:
+                async with session.post(f"https://{API_FULL_URL}/user/add_post/{email}",
                                         json=full_post) as response:
                     # print("here1")
                     resp = await response.json()
@@ -171,7 +175,8 @@ async def get_markdown(request:Request, user_email:str):
     # todo: could implement redis for faster post lookup
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(f"http://{API_HOST}:{API_PORT}/get-user-post/{user_email}") as response:
+            # async with session.get(f"http://{API_HOST}:{API_PORT}/get-user-post/{user_email}") as response:
+            async with session.get(f"https://{API_FULL_URL}/get-user-post/{user_email}") as response:
                 resp = await response.json()
                 # print("the resp from getting the post:", resp)
     except Exception as err:
