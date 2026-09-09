@@ -1,0 +1,6 @@
+FROM mongodb/mongodb-community-server:latest
+COPY ./mongo-init.js /docker-entrypoint-initdb.d/mongo-init.js
+VOLUME ["/data/db", "/data/configdb"]
+EXPOSE 27017
+
+
