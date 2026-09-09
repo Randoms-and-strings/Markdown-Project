@@ -1,4 +1,4 @@
-FROM mongodb/mongodb-community-server:latest
+FROM mongodb/mongodb-community-server:4.4-ubuntu2204-slim
 COPY ./mongo-init.js /docker-entrypoint-initdb.d/mongo-init.js
 VOLUME ["/data/db", "/data/configdb"]
 EXPOSE 27017
