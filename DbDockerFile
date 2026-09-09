@@ -1,5 +1,6 @@
 FROM mongodb/mongodb-community-server:4.4-ubuntu2204-slim
-COPY ./mongo-init.js /docker-entrypoint-initdb.d/mongo-init.js
+COPY ./mongo-init.sh /docker-entrypoint-initdb.d/mongo-init.sh
+RUN chmod +x /docker-entrypoint-initdb.d/mongo-init.sh
 VOLUME ["/data/db", "/data/configdb"]
 EXPOSE 27017
 
