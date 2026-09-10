@@ -99,9 +99,10 @@ async def remove_image_from_post(post_content:list):
         return True
 
     # print(all_img_names)
-    single_delete:bool = await delete_from_s3(all_img_names[0])
-    if not single_delete:
-        return HTTPException(status_code=500, detail="failed to delete an unused img from s3")
+    if all_img_names[0]:
+      single_delete:bool = await delete_from_s3(all_img_names[0])
+      if not single_delete:
+          return HTTPException(status_code=500, detail="failed to delete an unused img from s3")
     return True
 
 
