@@ -1,4 +1,4 @@
-.gelasio-head {
+/* .gelasio-head {
   font-family: "Gelasio", serif;
   font-optical-sizing: auto;
   font-weight: 700;
@@ -21,7 +21,7 @@ nav {
   background-color: black;
   border-radius: 0.5rem;
   /* margin-left: 90%; */
-  margin-bottom: 3rem;
+  /* margin-bottom: 3rem;
   cursor: pointer;
   margin-left: calc(50% - 4rem);
 }
@@ -100,10 +100,10 @@ input[type="submit"] {
 }
 .fa-image:hover,.fa-heading:hover,.fa-paragraph:hover,.fa-list:hover,.fa-xmark:hover {
   box-shadow: .1rem .1rem .05rem gray;
-}
+} */
 
 /* JS classes added for dynamic functionality */
-li:focus {
+/* li:focus {
   outline: none;
 }
 ul {
@@ -155,4 +155,180 @@ ul {
 .image-div > img {
   width: 100%;
   height: auto;
+} */ 
+.gelasio-head {
+  font-family: "Gelasio", serif;
+  font-optical-sizing: auto;
+  font-weight: 700;
+  font-style: normal;
 }
+.gelasio-body {
+  font-family: "Gelasio", serif;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal; 
+}
+nav {
+  height: 10vh;
+  background-color: black;
+}
+.submit-note{
+  width: 8rem;
+  height: 2.5rem;
+  color: white;
+  background-color: black;
+  border-radius: 0.5rem;
+  /* margin-left: 90%; */
+  margin-bottom: 3rem;
+  cursor: pointer;
+  margin-left: calc(50% - 4rem);
+}
+h1 {
+  width: 50%;
+  margin-left: calc(50% - 25%);
+  text-align: center;
+}
+.title-input {
+  width: 80%;
+  font-size: 3rem;
+  margin-left: calc(50% - 40% - 2rem);  
+  padding: 1rem;
+}
+.selection-container0 {
+  position: relative;
+}
+form > div{
+  position: relative;
+  margin-bottom: 3rem;
+}
+.delete-label {
+  font-size: 1.5rem;
+  cursor: pointer;
+  position: absolute;
+  top: calc(50% - 0.75rem);
+  right: calc(5%);
+  transform: translateX(60%);
+  
+}
+
+.add-label{
+  position: absolute;
+  left: 50%;
+  top: 0.3rem;
+  cursor: pointer;
+  font-size: 1.5rem;
+  transform: translateX(-50%);
+} 
+.pick-new-element{
+  position: relative;
+  margin-top: 3rem;
+  width: 100%;
+  height: 8rem; 
+}
+#options {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12rem;
+  height: 5rem;
+} 
+.element-type {
+  position: relative;
+  border: 0rem solid black;
+  border-radius: 0.5rem;
+  width: 10rem;
+  padding: 1rem;
+  background-color: rgb(204, 203, 203);
+  z-index: 2;
+  text-align: center;
+} 
+.triangle-up {
+  position: absolute;
+  left: 50%;
+  top: -25%;
+  z-index: 1;
+  transform: translateX(-50%);
+	border-left: 1rem solid transparent;
+	border-right: 1rem solid transparent;
+	border-bottom: 2rem solid rgb(204, 203, 203);
+}
+input[type="submit"] {
+  display: none;
+}
+.fa-image,.fa-heading,.fa-paragraph,.fa-list {
+  cursor: pointer;
+}
+.fa-image:hover,.fa-heading:hover,.fa-paragraph:hover,.fa-list:hover,.fa-xmark:hover {
+  box-shadow: .1rem .1rem .05rem gray;
+}
+
+/* JS classes added for dynamic functionality */
+li:focus {
+  outline: none;
+}
+ul {
+  border: 0px;
+  width: calc(80%);
+  /* margin-left: calc(50% - calc(40% - 5px)); */
+  margin-left: 50%;
+  transform: translateX(-50%);
+  padding: 1rem;
+}
+.hide-element{
+  display: none;
+}
+.new-h2-elements-input{
+  width: 80%;
+  font-size: 2.2rem;
+  margin-left: calc(50% - 40% - 2rem);
+  padding: 1rem;
+}
+.new-p-elements-input{
+  width: 80%;
+  font-size: 1rem;
+  margin-left: calc(50% - 40% - 2rem);
+  padding: 1rem;
+}
+.remove-borders{
+  border: 0px;
+  border-width:0px;
+}
+.image-div{
+  background-color: black;
+  width: 50%;
+  margin-left: calc(50% - 25%); 
+  margin-bottom: 3rem;
+}
+.image-div > input{
+  position: absolute;  
+  top: 0;
+  transform: translate(-50%, -100%);
+  width: auto;
+  left: calc(50% );
+  /* transform: translateX(-50%); */
+  z-index: 1;
+}
+.img-delete-label{
+  font-size: 1rem;
+  cursor: pointer;
+  position: absolute;
+  top: 0%;
+  right: 0
+}
+.ul-div {
+  margin-bottom: 3rem;
+  border:0px
+}
+.image-div > img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+@media (max-width:700px) {
+  .image-div{
+    width: 80%;
+    margin-left: calc(50% - 40%); 
+  }
+}
+
