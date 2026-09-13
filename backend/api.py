@@ -2,13 +2,14 @@
 # api to get info from db
 # uvicorn api:app --host 0.0.0.0 --port 8001 --reload
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from pymongo import ReturnDocument
 from .models import get_tables, client
 from contextlib import asynccontextmanager
 
 
 markdown_collection = None
-
+origins = ["*"]
 @asynccontextmanager
 async def lifespans(app:FastAPI):
     global markdown_collection
@@ -20,7 +21,12 @@ async def lifespans(app:FastAPI):
 
 
 app = FastAPI(lifespan=lifespans)
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_methods=["GET","POST"],
+    allow_headers=["*"],
+)
 
 
 
