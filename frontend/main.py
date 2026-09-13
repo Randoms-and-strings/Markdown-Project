@@ -42,6 +42,13 @@ app = FastAPI(lifespan=lifespans)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 # ---------------------------------------------model and app config above-----------------------------------------------------------------------
+
+# this is to test render is ready
+@app.get("/availability", status_code=200)
+def test_render_ready():
+    return {
+        "status": "ok"
+    }
 # route to display form, email as id
 #use email as userid when displaying form
 @app.get("/markdown-form/{user_email}", response_class=HTMLResponse)
