@@ -56,7 +56,12 @@ async def create_markdown_post(request: Request, email:str):
             "detail": "success",
             "former_post": update_result
         }
-
+        
+@app.get("/availability", status_code=200)
+def test_render_ready():
+    return {
+        "status": "ok"
+    }
 
 @app.get("/get-user-post/{user_id}/")
 async def get_post(user_id:str):
