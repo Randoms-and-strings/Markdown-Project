@@ -219,7 +219,7 @@ async def get_markdown(request:Request, user_email:str):
             for li in all_li_items[:-1]:  #the split added "" at the end of the list, so had to exclude that
                 arrangement += f"<li class='gelasio-body'>{li}</li>\n"
             # print(arrangement)
-            elements_present.append(Markup(f"<ul class='center-elements'>"
+            elements_present.append(Markup(f"<ul class=''>"
                                            f"{arrangement}"
                                            f"</ul>"))
         elif items.get("type") == "img":
