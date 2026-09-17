@@ -3,6 +3,7 @@ import time
 import aiohttp
 import os
 from fastapi import FastAPI, HTTPException, Request, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -37,8 +38,14 @@ async def lifespans(app:FastAPI):
 
     await rate_limiter.close_redis()
 
-
+origins = ["*"]
 app = FastAPI(lifespan=lifespans)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_methods=["GET","POST"],
+    allow_headers=["*"],
+)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 # ---------------------------------------------model and app config above-----------------------------------------------------------------------
