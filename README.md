@@ -29,109 +29,131 @@ README.md — this file.
 ---
 
 Quickstart from Repository Root
-Create .env files for root, /backend/.env, and /frontend/.env with the variables listed below.
+1. **Create env files** 
+   - `/backend/.env` and `/frontend/.env` — see **Environment variables** below.
 
-Build and run all services:
+2. **Build and run all services**
+   ```bash
+   docker compose up --build
+3. **Verify health**
 
-bash
-docker compose up --build
-Verify health (example):
-
-bash
-curl http://localhost:8001/availability   # backend health
-curl http://localhost:8000/availability   # frontend health 
-
----
-
-Backend Setup
-Start locally
-Ensure /backend/.env contains required variables (see Environment Variables).
-
-From repo root:
+Backend health (example):
 
 bash
-docker compose up backend
-or to run only backend with uvicorn (dev):
+curl http://localhost:${API_PORT:-8001}/availability
+Expected: {"status":"ok"}
+
+Frontend health (example):
 
 bash
-cd backend
-uvicorn api:app --host 0.0.0.0 --port 8001 --reload
-Key backend endpoints
-GET /availability — readiness probe.
-
-GET /user/create_new?q=<email> — upsert user record.
-
-POST /user/add_post/{email} — save user post (JSON array of blocks).
-
-GET /get-user-post/{user_id} — fetch stored post by email.
-
-Notes
-Backend uses an async MongoDB client and creates an index on email.
-
-Keep DB migrations and index creation idempotent for container restarts.
-
-Frontend Setup
-Start locally
-Ensure /frontend/.env contains required variables (see Environment Variables).
-
-From repo root:
+curl http://localhost:${APP_PORT:-8000}/availability
+4. **Stop**
 
 bash
-docker compose up frontend
-or run the frontend dev server (if Next.js):
+docker compose down
 
-bash
-cd frontend
-npm install
-npm run dev
-Frontend responsibilities
-Presents the markdown form and handles file uploads.
 
-Validates images and enforces 5 MB max size and allowed extensions.
+Services
+- frontend
+Build context: ./frontend
 
-Uses Redis for rate limiting (per email).
+Exposes port ${APP_PORT}:8000 (set APP_PORT in .env or use default 8000).
 
-Calls backend endpoints (/user/create_new, /user/add_post/{email}, /get-user-post/{email}) and renders the compiled HTML.
+Uses ./frontend/.env and environment variables for AWS credentials and S3 region.
 
-Notes
-Rate limiter and S3 helpers live in the frontend directory; ensure frontend has access to S3 credentials and Redis host.
+Depends on backend and redis (waits for healthy services).
 
-Environment Variables and Secrets
-Create .env files (root or per-service). Example variables:
+- backend (markdown-app-backend)
+Build context: ./backend
 
-Common
+Exposes port ${API_PORT}:8001 (set API_PORT in .env or use default 8001).
 
+Uses ./backend/.env.
+
+Healthcheck: http://markdown-app-backend:8001/user/create_new?q=tobi@gmail.com (container internal check).
+
+Depends on mongodb.
+
+- redis (markdown-app-redis)
+Image: redis:alpine
+
+Exposes ${REDIS_PORT}:${REDIS_PORT} (set REDIS_PORT in .env).
+
+- mongodb (markdown-app-mongodb)
+Image: mongodb/mongodb-community-server:latest
+
+Exposes 27017:27017
+
+Initializes with mongo-init.js and environment variables for root user and DB.
+
+Environment variables
+Create /backend/.env and /frontend/.env with the variables below. Do not commit .env files.
+
+- Backend (/backend/.env)
 Code
 API_PORT=8001
 API_HOST=localhost
 API_URL=localhost:8001
-MongoDB
-
-Code
 MONGODB_URL=mongodb://<user>:<pass>@mongodb:27017/<db>
-MONGODB_USERNAME=<user>
-MONGODB_PASSWORD=<pass>
+MONGODB_USERNAME=<root-user>
+MONGODB_PASSWORD=<root-pass>
 MONGODB_DB=<db>
-Redis
-
-Code
+MONGODB_CUSTOM_USERNAME=<app-user>
+MONGODB_PASSWORD=<app-user-pass>
 REDIS_HOST=redis
 REDIS_PORT=6379
-S3
 
+- Frontend (/frontend/.env)
 Code
+APP_PORT=8000
+API_URL=http://localhost:8001
+REDIS_HOST=redis
+REDIS_PORT=6379
 S3_MARKDOWNAPP_BUCKETNAME=<bucket-name>
 S3_MARKDOWNAPP_REGION=<region>
 S3_MARKDOWNAPP_FOLDER=<folder-prefix>
-AWS_ACCESS_KEY_ID=<aws-key>
-AWS_SECRET_ACCESS_KEY=<aws-secret>
-Other
+ACCESS_KEY=<aws-access-key>
+SECRET_KEY=<aws-secret-key>
 
+- Root / Compose environment (optional)
 Code
-ELASTIC_URL=<if using Elasticsearch>
-API_PORT_FRONTEND=8000
-Security: never commit .env to the repo. Use Render/Vercel environment variable settings for production.
+API_PORT=8001
+APP_PORT=8000
+REDIS_PORT=6379
+MONGODB_USERNAME=<root-user>
+MONGODB_PASSWORD=<root-pass>
+MONGODB_DB=<db>
+MONGODB_CUSTOM_USERNAME=<app-user>
+MONGODB_PASSWORD=<app-user-pass>
 
-Healthchecks, Testing, CI, and Deployment
-Healthchecks: use /availability for readiness probes in Render and container healthchecks in docker-compose.
+
+Key endpoints (local)
+- Backend
+GET /availability — healthcheck
+
+GET /user/create_new?q=<email> — create/upsert user record
+
+POST /user/add_post/{email} — save a user’s post (expects JSON array of blocks)
+
+GET /get-user-post/{user_id} — fetch stored post by email
+
+- Frontend
+GET /markdown-form/{user_email} — render input form (frontend route)
+
+POST /processing-page/{email} — process form, upload images to S3, call backend /user/add_post/{email}
+
+(Optional) GET /availability — frontend health 
+
+Data model (posts)
+Posts are ordered lists of block objects:
+
+json
+{
+  "type": "h1" | "h2" | "p" | "ul" | "img",
+  "position": 0,
+  "content": "..."
+}
+Images: validated extensions (png, jpg, jpeg, webp, gif), max size 5 MB, filenames replaced with UUIDs before upload.
+
+S3 URL: https://{BUCKET}.s3.{REGION}.amazonaws.com/{FOLDER}/{filename}
 
