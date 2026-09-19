@@ -1,6 +1,6 @@
-# Markdown App Backend
+# Markdown App 
 
-Async FastAPI backend for a modular Markdown editor. The service stores user posts in MongoDB, uploads images to AWS S3, and exposes async endpoints consumed by a frontend. It includes Redis‑backed rate limiting, image validation (5 MB max), and a healthcheck at `/availability`. Deployed on Render with Docker support for local development.
+Async FastAPI backend and Next.js frontend for a modular Markdown editor. The backend stores posts in MongoDB, uploads images to AWS S3, and exposes async endpoints consumed by the frontend. The frontend handles the user form, image uploads, rate limiting, and rendering. Both services are containerized and runnable from the repository root using docker compose.  
 
 ---
 
@@ -10,122 +10,128 @@ Async FastAPI backend for a modular Markdown editor. The service stores user pos
 - **Cache / Rate limiting:** Redis  
 - **Storage:** AWS S3 (aioboto3)  
 - **Concurrency / HTTP client:** asyncio, aiohttp  
-- **Deployment:** Render (backend), Vercel (frontend)  
+- **Deployment:** Render (backend and fontend) 
 - **Containerization:** Docker / docker-compose
 
 ---
 
-## One‑line summary
-Async FastAPI backend for a modular Markdown editor — stores posts in MongoDB, uploads images to S3, and serves async endpoints for a Next.js frontend. Deployed on Render.
+Repository Structure
+/backend — FastAPI service (models, DB calls, API endpoints).
+
+/frontend — FastAPI frontend service (form UI, rate limiter, S3 helpers) or Next.js frontend depending on your repo layout; contains S3 upload helpers, image parsing, and client routes.
+
+docker-compose.yml (root) — orchestrates backend, frontend, mongodb, redis, and other services.
+
+.env — environment variables (not committed).
+
+README.md — this file.
 
 ---
 
-## Quickstart (Local)
+Quickstart from Repository Root
+Create .env files for root, /backend/.env, and /frontend/.env with the variables listed below.
 
-1. Clone the repo and create a `.env` file with the variables listed below.  
-2. Build and run with Docker Compose:
-   ```bash
-   docker compose up --build
-3. Verify service health:
-  bash
-  curl http://localhost:8001/availability
-  Response: {"status":"ok"}
+Build and run all services:
 
-Required environment variables
-env
-MONGODB_URL=<mongodb-connection-string>
+bash
+docker compose up --build
+Verify health (example):
+
+bash
+curl http://localhost:8001/availability   # backend health
+curl http://localhost:8000/availability   # frontend health 
+
+---
+
+Backend Setup
+Start locally
+Ensure /backend/.env contains required variables (see Environment Variables).
+
+From repo root:
+
+bash
+docker compose up backend
+or to run only backend with uvicorn (dev):
+
+bash
+cd backend
+uvicorn api:app --host 0.0.0.0 --port 8001 --reload
+Key backend endpoints
+GET /availability — readiness probe.
+
+GET /user/create_new?q=<email> — upsert user record.
+
+POST /user/add_post/{email} — save user post (JSON array of blocks).
+
+GET /get-user-post/{user_id} — fetch stored post by email.
+
+Notes
+Backend uses an async MongoDB client and creates an index on email.
+
+Keep DB migrations and index creation idempotent for container restarts.
+
+Frontend Setup
+Start locally
+Ensure /frontend/.env contains required variables (see Environment Variables).
+
+From repo root:
+
+bash
+docker compose up frontend
+or run the frontend dev server (if Next.js):
+
+bash
+cd frontend
+npm install
+npm run dev
+Frontend responsibilities
+Presents the markdown form and handles file uploads.
+
+Validates images and enforces 5 MB max size and allowed extensions.
+
+Uses Redis for rate limiting (per email).
+
+Calls backend endpoints (/user/create_new, /user/add_post/{email}, /get-user-post/{email}) and renders the compiled HTML.
+
+Notes
+Rate limiter and S3 helpers live in the frontend directory; ensure frontend has access to S3 credentials and Redis host.
+
+Environment Variables and Secrets
+Create .env files (root or per-service). Example variables:
+
+Common
+
+Code
 API_PORT=8001
 API_HOST=localhost
 API_URL=localhost:8001
-REDIS_HOST=<redis-host>
-REDIS_PORT=<redis-port>
+MongoDB
+
+Code
+MONGODB_URL=mongodb://<user>:<pass>@mongodb:27017/<db>
+MONGODB_USERNAME=<user>
+MONGODB_PASSWORD=<pass>
+MONGODB_DB=<db>
+Redis
+
+Code
+REDIS_HOST=redis
+REDIS_PORT=6379
+S3
+
+Code
 S3_MARKDOWNAPP_BUCKETNAME=<bucket-name>
 S3_MARKDOWNAPP_REGION=<region>
 S3_MARKDOWNAPP_FOLDER=<folder-prefix>
 AWS_ACCESS_KEY_ID=<aws-key>
 AWS_SECRET_ACCESS_KEY=<aws-secret>
-Key Endpoints
-GET /availability — healthcheck
+Other
 
-GET /user/create_new?q=<email> — create user record (upsert)
+Code
+ELASTIC_URL=<if using Elasticsearch>
+API_PORT_FRONTEND=8000
+Security: never commit .env to the repo. Use Render/Vercel environment variable settings for production.
 
-POST /user/add_post/{email} — save a user’s post (expects JSON array of blocks)
+Healthchecks, Testing, CI, and Deployment
+Healthchecks: use /availability for readiness probes in Render and container healthchecks in docker-compose.
 
-GET /get-user-post/{user_id} — fetch stored post by email
-
-GET /markdown-form/{user_email} — frontend form route (renders input form)
-
-POST /processing-page/{email} — frontend processing route (handles file uploads, S3 upload, and calls /user/add_post/{email})
-
-Data model
-Posts are stored as ordered lists of block objects:
-
-json
-{
-  "type": "h1" | "h2" | "p" | "ul" | "img",
-  "position": 0,
-  "content": "some content..."
-}
-Image uploads: validated extensions (png, jpg, jpeg, webp, gif), max size 5 MB, filenames replaced with UUIDs before upload.
-
-S3 URL format: https://{BUCKET}.s3.{REGION}.amazonaws.com/{FOLDER}/{filename} — get_img_s3() builds public links.
-
-Rate limiting
-Redis‑backed limiter keyed by email.
-
-Default window: 60 seconds.
-
-Soft limit: 5 requests per window (configurable).
-
-Behavior & important notes
-Async design: backend uses async endpoints and async MongoDB client for concurrency and responsiveness.
-
-Non‑atomic image deletion: old images are removed from S3 after new uploads; consider moving deletions to a background queue (Celery + RabbitMQ) to avoid partial failures.
-
-Validation: server validates file types and sizes; additional input sanitization is recommended before rendering HTML.
-
-Healthchecks: docker-compose includes healthchecks; Render should use /availability for readiness.
-
-Testing & CI (recommended)
-Add pytest tests for core flows: create_new, add_post, get-user-post, image parsing, and rate limiting.
-
-Suggested test command:
-
-bash
-pytest tests/
-Add a GitHub Actions workflow to run tests and lint on push/PR (run pytest, flake8/black).
-
-Observability & reliability (recommended)
-Add structured logging (request id, endpoint, duration, status).
-
-Convert printed timing info to structured logs/metrics.
-
-Add retry/backoff for external calls (S3, MongoDB) and idempotency keys for repeated requests.
-
-Consider moving heavy or non‑critical work (image deletion, large uploads) to background workers.
-
-Security
-Use least‑privilege IAM credentials for S3 and prefer pre‑signed URLs if moving uploads to clients.
-
-Keep server‑side validation for file types and sizes.
-
-Sanitize user content before rendering to prevent XSS.
-
-Protect sensitive endpoints with authentication if required.
-
-Deployment notes
-Render: configure healthcheck to /availability. Use environment variables for secrets.
-
-Frontend: deployed on Vercel; static loading page is used to mitigate backend cold starts. Document this in the frontend README.
-
-Contributing
-Fork the repo.
-
-Create a feature branch.
-
-Add tests for new functionality.
-
-Open a pull request.
-
-License
-Add a LICENSE file (MIT recommended for personal projects).
