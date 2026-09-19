@@ -37,42 +37,43 @@ Quickstart from Repository Root
    docker compose up --build
 3. **Verify health**
 
-Backend health (example):
+   - Backend health (example):
+   ```bash
+   curl http://localhost:${API_PORT:-8001}/availability
+   ```
+   Expected: {"status":"ok"}
 
-bash
-curl http://localhost:${API_PORT:-8001}/availability
-Expected: {"status":"ok"}
-
-Frontend health (example):
-
-bash
-curl http://localhost:${APP_PORT:-8000}/availability
+   -Frontend health (example):
+   ```bash
+   curl http://localhost:${APP_PORT:-8000}/availability
+   ```
 4. **Stop**
-
-bash
-docker compose down
-
+   ```bash
+   docker compose down
+   ```
+---
 
 Services
-- frontend
-Build context: ./frontend
+- **frontend**
 
-Exposes port ${APP_PORT}:8000 (set APP_PORT in .env or use default 8000).
+   Build context: ./frontend
+   
+   Exposes port ${APP_PORT}:8000 (set APP_PORT in .env or use default 8000).
+   
+   Uses ./frontend/.env and environment variables for AWS credentials and S3 region.
+   
+   Depends on backend and redis (waits for healthy services).
 
-Uses ./frontend/.env and environment variables for AWS credentials and S3 region.
-
-Depends on backend and redis (waits for healthy services).
-
-- backend (markdown-app-backend)
-Build context: ./backend
-
-Exposes port ${API_PORT}:8001 (set API_PORT in .env or use default 8001).
-
-Uses ./backend/.env.
-
-Healthcheck: http://markdown-app-backend:8001/user/create_new?q=tobi@gmail.com (container internal check).
-
-Depends on mongodb.
+- **backend** 
+   Build context: ./backend
+   
+   Exposes port ${API_PORT}:8001 (set API_PORT in .env or use default 8001).
+   
+   Uses ./backend/.env.
+   
+   Healthcheck: http://markdown-app-backend:8001/user/create_new?q=tobi@gmail.com (container internal check).
+   
+   Depends on mongodb.
 
 - redis (markdown-app-redis)
 Image: redis:alpine
